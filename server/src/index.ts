@@ -16,7 +16,7 @@ import siteRoutes from './routes/site';
 import sitebuildRoutes, { publicRouter as sitebuildPublic } from './routes/sitebuilder';
 
 const app = express();
-const PORT = parseInt(process.env.PORT || '3001');
+const PORT = parseInt(process.env.PORT || '3012');
 
 const ALLOWED_ORIGINS = new Set([
   'https://arc360hub.com',
