@@ -180,15 +180,17 @@
     try {
       const { jobId } = await api.post<{ jobId: string }>('/api/sitebuilder/ai/chat', { message: text, history });
 
-      type JobResult = { reply: string; actions: FileAction[]; files: SiteFile[]; remaining: number };
-      type PollResponse = { status: 'pending' | 'done' | 'error'; result?: JobResult; error?: string };
+      type PollResponse =
+        | { status: 'pending' }
+        | { status: 'error'; error: string }
+        | { status: 'done'; reply: string; actions: FileAction[]; files: SiteFile[]; remaining: number };
 
-      let res: JobResult | null = null;
+      let res: Extract<PollResponse, { status: 'done' }> | null = null;
       while (true) {
         await new Promise(r => setTimeout(r, 2000));
         const poll = await api.get<PollResponse>(`/api/sitebuilder/ai/status/${jobId}`);
         if (poll.status === 'error') throw new Error(poll.error ?? 'AI processing failed');
-        if (poll.status === 'done') { res = poll.result ?? null; break; }
+        if (poll.status === 'done') { res = poll; break; }
       }
       if (!res) throw new Error('No response received');
 
