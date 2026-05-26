@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import db, { getFullProfile } from '../db';
+import db, { getFullProfile, BADGE_DEFS } from '../db';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
@@ -220,6 +220,36 @@ router.delete('/fields/:fieldId/entries/:entryId', requireAuth, (req, res) => {
   const result = db.prepare('DELETE FROM custom_field_entries WHERE id = ? AND user_id = ?').run(req.params.entryId, req.user!.id);
   if (result.changes === 0) return res.status(404).json({ error: 'Entry not found' });
   return res.json({ message: 'Entry removed' });
+});
+
+// --- Badges ---
+router.put('/badges/:badgeId/visibility', requireAuth, (req, res) => {
+  const { badgeId } = req.params;
+  const { visible } = req.body;
+  if (!BADGE_DEFS.some(d => d.id === badgeId)) return res.status(404).json({ error: 'Badge not found' });
+  db.prepare(`
+    INSERT INTO user_badges (user_id, badge_id, visible, sort_order)
+    VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM user_badges WHERE user_id = ?))
+    ON CONFLICT(user_id, badge_id) DO UPDATE SET visible = excluded.visible
+  `).run(req.user!.id, badgeId, visible ? 1 : 0, req.user!.id);
+  return res.json({ ok: true });
+});
+
+router.put('/badges/order', requireAuth, (req, res) => {
+  const { order } = req.body as { order: string[] };
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array' });
+  const stmt = db.prepare(`
+    INSERT INTO user_badges (user_id, badge_id, sort_order)
+    VALUES (?, ?, ?)
+    ON CONFLICT(user_id, badge_id) DO UPDATE SET sort_order = excluded.sort_order
+  `);
+  const tx = db.transaction(() => {
+    order.forEach((badgeId, i) => {
+      if (BADGE_DEFS.some(d => d.id === badgeId)) stmt.run(req.user!.id, badgeId, i);
+    });
+  });
+  tx();
+  return res.json({ ok: true });
 });
 
 export default router;

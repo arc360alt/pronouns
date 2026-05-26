@@ -164,11 +164,67 @@ db.exec(`
     PRIMARY KEY (user_id, date),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS user_badges (
+    user_id INTEGER NOT NULL,
+    badge_id TEXT NOT NULL,
+    awarded_by INTEGER,
+    awarded_at TEXT NOT NULL DEFAULT (datetime('now')),
+    visible INTEGER NOT NULL DEFAULT 1,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, badge_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
+
+export const BADGE_DEFS = [
+  { id: 'admin',           name: 'Admin',              icon: 'fa-solid fa-shield-halved',  color: '#e07a27', description: 'Platform administrator' },
+  { id: 'og',              name: 'OG',                 icon: 'fa-solid fa-star',           color: '#f5c518', description: 'Joined before June 25, 2026' },
+  { id: 'friend_of_owner', name: 'Friend of Owner',    icon: 'fa-solid fa-heart',          color: '#e05c7a', description: 'Personal friend of the owner' },
+  { id: 'one_year',        name: '1+ Year of Service', icon: 'fa-solid fa-calendar-check', color: '#4caf50', description: 'Member for over a year' },
+] as const;
+
+export type BadgeId = typeof BADGE_DEFS[number]['id'];
+
+function computeBadges(userId: number, isAdmin: number, createdAt: string) {
+  const earned = new Set<string>();
+
+  if (isAdmin) earned.add('admin');
+  if (new Date(createdAt) < new Date('2026-06-25T00:00:00Z')) earned.add('og');
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  if (new Date(createdAt) < oneYearAgo) earned.add('one_year');
+
+  const manual = db.prepare(
+    'SELECT badge_id FROM user_badges WHERE user_id = ? AND awarded_by IS NOT NULL'
+  ).all(userId) as { badge_id: string }[];
+  manual.forEach(r => earned.add(r.badge_id));
+
+  const prefs = db.prepare(
+    'SELECT badge_id, visible, sort_order FROM user_badges WHERE user_id = ?'
+  ).all(userId) as { badge_id: string; visible: number; sort_order: number }[];
+  const prefMap = new Map(prefs.map(p => [p.badge_id, p]));
+
+  return BADGE_DEFS
+    .filter(def => earned.has(def.id))
+    .map(def => {
+      const pref = prefMap.get(def.id);
+      return {
+        id: def.id,
+        name: def.name,
+        icon: def.icon,
+        color: def.color,
+        description: def.description,
+        visible: pref ? pref.visible === 1 : true,
+        sort_order: pref?.sort_order ?? 0,
+      };
+    })
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
 
 export function getFullProfile(userId: number) {
   const profile = db.prepare(`
-    SELECT u.username, u.created_at,
+    SELECT u.username, u.created_at, u.is_admin,
            p.display_name, p.bio, p.gender, p.pronouns,
            p.profile_picture, p.banner, p.banner_position, p.custom_color, p.show_friends,
            p.location, p.occupation, p.birthday, p.website, p.timezone,
@@ -178,7 +234,7 @@ export function getFullProfile(userId: number) {
     LEFT JOIN profiles p ON u.id = p.user_id
     LEFT JOIN user_sites s ON u.id = s.user_id
     WHERE u.id = ?
-  `).get(userId) as Record<string, unknown> | undefined;
+  `).get(userId) as (Record<string, unknown> & { is_admin: number; created_at: string }) | undefined;
 
   if (!profile) return null;
 
@@ -209,7 +265,9 @@ export function getFullProfile(userId: number) {
     ).all(f.id)
   }));
 
-  return { ...profile, names, flags, images, friends, links, custom_fields };
+  const badges = computeBadges(userId, profile.is_admin, profile.created_at);
+  const { is_admin: _ia, ...rest } = profile;
+  return { ...rest, names, flags, images, friends, links, custom_fields, badges };
 }
 
 export default db;

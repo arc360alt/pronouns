@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { user, waitForUser } from '$lib/stores';
   import { api } from '$lib/api';
-  import type { Profile, ProfileName, ProfileFlag, ProfileImage, Friend, ProfileLink, CustomField, CustomFieldEntry } from '$lib/types';
+  import type { Profile, ProfileName, ProfileFlag, ProfileImage, Friend, ProfileLink, CustomField, CustomFieldEntry, Badge } from '$lib/types';
 
   // Basic profile fields
   let displayName = $state('');
@@ -39,6 +39,8 @@
   let friends = $state<Friend[]>([]);
   let links = $state<ProfileLink[]>([]);
   let customFields = $state<CustomField[]>([]);
+  let badges = $state<Badge[]>([]);
+  let badgeDragId = $state<string | null>(null);
 
   // New item inputs
   let newName = $state('');
@@ -209,6 +211,7 @@
         newEntryValues[f.id] = '';
         newEntryStatuses[f.id] = '';
       });
+      badges = data.badges || [];
     } catch { /* ignore */ }
     finally { loading = false; }
   });
@@ -452,6 +455,34 @@
     customFields = customFields.map(f =>
       f.id === fieldId ? { ...f, entries: f.entries.map(e => e.id === entryId ? { ...e, preference: next } : e) } : f
     );
+  }
+
+  async function toggleBadgeVisibility(badgeId: string, visible: boolean) {
+    await api.put(`/api/profile/badges/${badgeId}/visibility`, { visible });
+    badges = badges.map(b => b.id === badgeId ? { ...b, visible } : b);
+  }
+
+  function onBadgeDragStart(e: DragEvent, id: string) {
+    badgeDragId = id;
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function onBadgeDragOver(e: DragEvent, id: string) {
+    e.preventDefault();
+    if (!badgeDragId || badgeDragId === id) return;
+    const from = badges.findIndex(b => b.id === badgeDragId);
+    const to = badges.findIndex(b => b.id === id);
+    if (from !== -1 && to !== -1 && from !== to) {
+      const next = [...badges];
+      next.splice(from, 1);
+      next.splice(to, 0, badges[from]);
+      badges = next;
+    }
+  }
+
+  async function onBadgeDragEnd() {
+    badgeDragId = null;
+    await api.put('/api/profile/badges/order', { order: badges.map(b => b.id) });
   }
 </script>
 
@@ -870,6 +901,42 @@
       </div>
     </div>
   </div>
+
+  <!-- ── Badges ── -->
+  {#if badges.length > 0}
+  <div class="card" style="margin-bottom:1rem">
+    <p class="section-title">Badges</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:0.75rem">
+      Drag to reorder. Toggle the eye to show or hide a badge on your profile.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:0.4rem">
+      {#each badges as b (b.id)}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          draggable={true}
+          ondragstart={(e) => onBadgeDragStart(e, b.id)}
+          ondragover={(e) => onBadgeDragOver(e, b.id)}
+          ondragend={onBadgeDragEnd}
+          style="display:flex;align-items:center;gap:0.6rem;padding:0.45rem 0.6rem;border-radius:var(--radius);background:var(--card-bg);border:1px solid var(--border);cursor:grab;opacity:{b.visible ? 1 : 0.45}"
+        >
+          <i class="fa-solid fa-grip-vertical" style="color:var(--text-muted);font-size:12px"></i>
+          <span class="profile-badge" style="--badge-color:{b.color}">
+            <i class="{b.icon}"></i> {b.name}
+          </span>
+          <span style="flex:1;font-size:12px;color:var(--text-muted)">{b.description}</span>
+          <button
+            class="btn btn-ghost btn-sm"
+            style="padding:0.2rem 0.5rem;font-size:12px"
+            title={b.visible ? 'Hide badge' : 'Show badge'}
+            onclick={() => toggleBadgeVisibility(b.id, !b.visible)}
+          >
+            <i class="fa-solid {b.visible ? 'fa-eye' : 'fa-eye-slash'}"></i>
+          </button>
+        </div>
+      {/each}
+    </div>
+  </div>
+  {/if}
 
   <!-- ── Friends ── -->
   <div class="card" style="margin-bottom:1rem">

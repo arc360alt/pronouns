@@ -55,6 +55,16 @@ export interface CustomField {
   entries: CustomFieldEntry[];
 }
 
+export interface Badge {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  description: string;
+  visible: boolean;
+  sort_order: number;
+}
+
 export interface Profile {
   user_id: number;
   username: string;
@@ -84,6 +94,7 @@ export interface Profile {
   friends: Friend[];
   links: ProfileLink[];
   custom_fields: CustomField[];
+  badges: Badge[];
   is_banned?: boolean;
 }
 

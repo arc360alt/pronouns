@@ -226,13 +226,22 @@
             <span class="profile-username">@{profile.username}</span>
           {/if}
         </div>
-        {#if profile.pronouns || profile.gender || profile.location || profile.occupation || profile.birthday}
-          <div class="profile-meta">
+        <div class="profile-meta">
             {#if profile.pronouns}<span><i class="fa-solid fa-tag" style="color:var(--accent)"></i> {profile.pronouns}</span>{/if}
             {#if profile.gender}<span>{profile.gender}</span>{/if}
             {#if profile.occupation}<span><i class="fa-solid fa-briefcase" style="color:var(--accent)"></i> {profile.occupation}</span>{/if}
             {#if profile.location}<span><i class="fa-solid fa-location-dot" style="color:var(--accent)"></i> {profile.location}</span>{/if}
             {#if profile.birthday}<span><i class="fa-solid fa-cake-candles" style="color:var(--accent)"></i> {formatBirthday(profile.birthday)}</span>{/if}
+            <span><i class="fa-solid fa-door-open" style="color:var(--accent)"></i> Joined {new Date(profile.created_at).toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+          </div>
+        {#if profile.badges.filter(b => b.visible).length > 0}
+          <div class="badge-row">
+            {#each profile.badges.filter(b => b.visible) as badge}
+              <span class="profile-badge" style="--badge-color:{badge.color}" title={badge.description}>
+                <i class="{badge.icon}"></i>
+                {badge.name}
+              </span>
+            {/each}
           </div>
         {/if}
         {#if isOwnProfile}

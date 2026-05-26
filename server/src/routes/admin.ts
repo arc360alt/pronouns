@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import db from '../db';
+import db, { BADGE_DEFS } from '../db';
 import { requireAdmin } from '../middleware/auth';
 
 const router = Router();
@@ -86,6 +86,28 @@ router.put('/banner', requireAdmin, (req, res) => {
   set.run('banner_btn_text', btn_text || '');
   set.run('banner_btn_url',  btn_url || '');
   return res.json({ message: 'Banner updated' });
+});
+
+router.get('/badges', requireAdmin, (_req, res) => {
+  return res.json(BADGE_DEFS);
+});
+
+router.post('/users/:id/badges/:badgeId', requireAdmin, (req, res) => {
+  const { id, badgeId } = req.params;
+  if (!BADGE_DEFS.some(d => d.id === badgeId)) return res.status(404).json({ error: 'Unknown badge' });
+  db.prepare(`
+    INSERT INTO user_badges (user_id, badge_id, awarded_by, visible, sort_order)
+    VALUES (?, ?, ?, 1, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM user_badges WHERE user_id = ?))
+    ON CONFLICT(user_id, badge_id) DO UPDATE SET awarded_by = excluded.awarded_by
+  `).run(id, badgeId, req.user!.id, id);
+  return res.json({ ok: true });
+});
+
+router.delete('/users/:id/badges/:badgeId', requireAdmin, (req, res) => {
+  const { id, badgeId } = req.params;
+  db.prepare('DELETE FROM user_badges WHERE user_id = ? AND badge_id = ? AND awarded_by IS NOT NULL')
+    .run(id, badgeId);
+  return res.json({ ok: true });
 });
 
 export default router;

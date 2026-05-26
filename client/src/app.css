@@ -90,6 +90,8 @@ a:hover { text-decoration: underline; }
   text-decoration: none;
 }
 .nav-links a:hover { color: var(--text); text-decoration: none; }
+.nav-links a.btn-primary { color: #fff; }
+.nav-links a.btn-primary:hover { color: #fff; }
 
 /* Hamburger button — hidden on desktop */
 .nav-hamburger {
@@ -527,6 +529,22 @@ button.pref-btn:hover { opacity: 1; background: none; }
 .profile-display-name { font-size: 1.4rem; font-weight: 700; line-height: 1.2; }
 .profile-username { font-size: 0.95rem; color: var(--text-muted); font-weight: 400; }
 .profile-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem 1rem; margin-top: 0.5rem; font-size: 14px; color: var(--text-muted); }
+
+.badge-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 0.65rem; }
+.profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--badge-color) 18%, transparent);
+  color: var(--badge-color);
+  border: 1px solid color-mix(in srgb, var(--badge-color) 40%, transparent);
+  cursor: default;
+  letter-spacing: 0.02em;
+}
 .profile-divider {
   display: flex;
   align-items: center;

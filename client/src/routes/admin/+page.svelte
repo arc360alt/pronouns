@@ -3,7 +3,8 @@
   import { goto } from '$app/navigation';
   import { user, waitForUser } from '$lib/stores';
   import { api } from '$lib/api';
-  import type { Report, AdminUser } from '$lib/types';
+  import Modal from '$lib/components/Modal.svelte';
+  import type { Report, AdminUser, Badge } from '$lib/types';
 
   let tab = $state<'reports' | 'users' | 'banner'>('reports');
   let reports = $state<Report[]>([]);
@@ -103,6 +104,51 @@
   }
 
   let pendingCount = $derived(reports.filter(r => r.status === 'pending').length);
+
+  // Badge management modal
+  let badgeModalUser = $state<AdminUser | null>(null);
+  let allBadgeDefs = $state<Badge[]>([]);
+  let userBadges = $state<Badge[]>([]);
+  let badgeLoading = $state(false);
+
+  async function openBadgeModal(u: AdminUser) {
+    badgeModalUser = u;
+    badgeLoading = true;
+    try {
+      const [defs, profile] = await Promise.all([
+        api.get<Badge[]>('/api/admin/badges'),
+        api.get<{ badges: Badge[] }>(`/api/users/${u.username}`),
+      ]);
+      allBadgeDefs = defs;
+      userBadges = profile.badges;
+    } catch (err) {
+      showMsg(err instanceof Error ? err.message : 'Failed to load badges');
+    } finally {
+      badgeLoading = false;
+    }
+  }
+
+  function hasBadge(badgeId: string) {
+    return userBadges.some(b => b.id === badgeId);
+  }
+
+  async function awardBadge(badgeId: string) {
+    if (!badgeModalUser) return;
+    try {
+      await api.post(`/api/admin/users/${badgeModalUser.id}/badges/${badgeId}`, {});
+      userBadges = [...userBadges.filter(b => b.id !== badgeId), { ...allBadgeDefs.find(d => d.id === badgeId)!, visible: true, sort_order: userBadges.length }];
+      showMsg('Badge awarded');
+    } catch (err) { showMsg(err instanceof Error ? err.message : 'Failed'); }
+  }
+
+  async function revokeBadge(badgeId: string) {
+    if (!badgeModalUser) return;
+    try {
+      await api.delete(`/api/admin/users/${badgeModalUser.id}/badges/${badgeId}`);
+      userBadges = userBadges.filter(b => b.id !== badgeId);
+      showMsg('Badge revoked');
+    } catch (err) { showMsg(err instanceof Error ? err.message : 'Failed'); }
+  }
 </script>
 
 <svelte:head><title>Admin Panel — pronouns</title></svelte:head>
@@ -239,6 +285,9 @@
                     title="Reset today's AI message limit">
                     Reset AI limit
                   </button>
+                  <button class="btn btn-ghost btn-sm" onclick={() => openBadgeModal(u)}>
+                    <i class="fa-solid fa-medal"></i> Badges
+                  </button>
                 </div>
               </td>
             </tr>
@@ -302,3 +351,28 @@
   {/if}
 </div>
 {/if}
+
+<Modal open={!!badgeModalUser} title="Badges — @{badgeModalUser?.username ?? ''}" onClose={() => badgeModalUser = null}>
+  {#snippet children()}
+    {#if badgeLoading}
+      <p style="color:var(--text-muted)">Loading…</p>
+    {:else}
+      <div style="display:flex;flex-direction:column;gap:0.5rem">
+        {#each allBadgeDefs as def}
+          {@const owned = hasBadge(def.id)}
+          <div style="display:flex;align-items:center;gap:0.75rem;padding:0.4rem 0.5rem;border-radius:var(--radius);background:var(--card-bg);border:1px solid var(--border)">
+            <span class="profile-badge" style="--badge-color:{def.color}">
+              <i class="{def.icon}"></i> {def.name}
+            </span>
+            <span style="flex:1;font-size:12px;color:var(--text-muted)">{def.description}</span>
+            {#if owned}
+              <button class="btn btn-danger btn-sm" onclick={() => revokeBadge(def.id)}>Revoke</button>
+            {:else}
+              <button class="btn btn-sm" style="background:var(--success);color:#fff" onclick={() => awardBadge(def.id)}>Award</button>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+  {/snippet}
+</Modal>
