@@ -1,0 +1,225 @@
+import { Router } from 'express';
+import db, { getFullProfile } from '../db';
+import { requireAuth } from '../middleware/auth';
+
+const router = Router();
+
+router.get('/', requireAuth, (req, res) => {
+  const profile = getFullProfile(req.user!.id);
+  if (!profile) return res.status(404).json({ error: 'Profile not found' });
+  return res.json({ user_id: req.user!.id, ...profile });
+});
+
+router.put('/', requireAuth, (req, res) => {
+  const { display_name, bio, gender, pronouns, custom_color, show_friends,
+          location, occupation, birthday, website, timezone,
+          banner_height, avatar_size, show_site } = req.body;
+  const clamp = (v: unknown, min: number, max: number, def: number) => {
+    const n = parseInt(v as string);
+    return isNaN(n) ? def : Math.min(max, Math.max(min, n));
+  };
+  db.prepare(`
+    UPDATE profiles SET
+      display_name = ?, bio = ?, gender = ?, pronouns = ?,
+      custom_color = ?, show_friends = ?,
+      location = ?, occupation = ?, birthday = ?, website = ?, timezone = ?,
+      banner_height = ?, avatar_size = ?, show_site = ?
+    WHERE user_id = ?
+  `).run(
+    display_name || null, bio || null, gender || null, pronouns || null,
+    custom_color || null, show_friends ? 1 : 0,
+    location || null, occupation || null, birthday || null, website || null, timezone || null,
+    clamp(banner_height, 100, 400, 240), clamp(avatar_size, 60, 180, 120),
+    show_site ? 1 : 0,
+    req.user!.id
+  );
+  return res.json({ message: 'Profile updated' });
+});
+
+router.put('/section-order', requireAuth, (req, res) => {
+  const { section_order } = req.body;
+  if (typeof section_order !== 'string') return res.status(400).json({ error: 'section_order must be a string' });
+  db.prepare('UPDATE profiles SET section_order = ? WHERE user_id = ?').run(section_order, req.user!.id);
+  return res.json({ ok: true });
+});
+
+router.put('/picture', requireAuth, (req, res) => {
+  const { url } = req.body;
+  db.prepare('UPDATE profiles SET profile_picture = ? WHERE user_id = ?').run(url || null, req.user!.id);
+  return res.json({ message: 'Profile picture updated' });
+});
+
+router.put('/banner', requireAuth, (req, res) => {
+  const { url, position } = req.body;
+  db.prepare('UPDATE profiles SET banner = ?, banner_position = ? WHERE user_id = ?')
+    .run(url || null, position || '50% 50%', req.user!.id);
+  return res.json({ message: 'Banner updated' });
+});
+
+router.post('/names', requireAuth, (req, res) => {
+  const { name } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
+
+  const row = db.prepare('SELECT MAX(sort_order) as m FROM profile_names WHERE user_id = ?').get(req.user!.id) as { m: number | null };
+  const nextOrder = (row.m ?? -1) + 1;
+  const result = db.prepare(
+    'INSERT INTO profile_names (user_id, name, sort_order) VALUES (?, ?, ?)'
+  ).run(req.user!.id, name.trim(), nextOrder);
+
+  return res.status(201).json({ id: result.lastInsertRowid, name: name.trim(), sort_order: nextOrder });
+});
+
+router.put('/names/:id', requireAuth, (req, res) => {
+  const { preference } = req.body;
+  const allowed = [null, 'favorite', 'okay'];
+  if (!allowed.includes(preference ?? null)) return res.status(400).json({ error: 'Invalid preference' });
+  db.prepare('UPDATE profile_names SET preference = ? WHERE id = ? AND user_id = ?').run(preference ?? null, req.params.id, req.user!.id);
+  return res.json({ preference: preference ?? null });
+});
+
+router.delete('/names/:id', requireAuth, (req, res) => {
+  const result = db.prepare('DELETE FROM profile_names WHERE id = ? AND user_id = ?').run(req.params.id, req.user!.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Name not found' });
+  return res.json({ message: 'Name removed' });
+});
+
+router.post('/flags', requireAuth, (req, res) => {
+  const { flag_name, flag_image } = req.body;
+  if (!flag_name?.trim() || !flag_image) return res.status(400).json({ error: 'Flag name and image are required' });
+
+  const row = db.prepare('SELECT MAX(sort_order) as m FROM profile_flags WHERE user_id = ?').get(req.user!.id) as { m: number | null };
+  const nextOrder = (row.m ?? -1) + 1;
+  const result = db.prepare(
+    'INSERT INTO profile_flags (user_id, flag_name, flag_image, sort_order) VALUES (?, ?, ?, ?)'
+  ).run(req.user!.id, flag_name.trim(), flag_image, nextOrder);
+
+  return res.status(201).json({ id: result.lastInsertRowid, flag_name: flag_name.trim(), flag_image, sort_order: nextOrder });
+});
+
+router.delete('/flags/:id', requireAuth, (req, res) => {
+  const result = db.prepare('DELETE FROM profile_flags WHERE id = ? AND user_id = ?').run(req.params.id, req.user!.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Flag not found' });
+  return res.json({ message: 'Flag removed' });
+});
+
+router.post('/images', requireAuth, (req, res) => {
+  const { image_url, caption } = req.body;
+  if (!image_url) return res.status(400).json({ error: 'Image URL is required' });
+
+  const row = db.prepare('SELECT MAX(sort_order) as m FROM profile_images WHERE user_id = ?').get(req.user!.id) as { m: number | null };
+  const nextOrder = (row.m ?? -1) + 1;
+  const result = db.prepare(
+    'INSERT INTO profile_images (user_id, image_url, caption, sort_order) VALUES (?, ?, ?, ?)'
+  ).run(req.user!.id, image_url, caption || null, nextOrder);
+
+  return res.status(201).json({ id: result.lastInsertRowid, image_url, caption: caption || null, sort_order: nextOrder });
+});
+
+router.delete('/images/:id', requireAuth, (req, res) => {
+  const result = db.prepare('DELETE FROM profile_images WHERE id = ? AND user_id = ?').run(req.params.id, req.user!.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Image not found' });
+  return res.json({ message: 'Image removed' });
+});
+
+router.post('/friends', requireAuth, (req, res) => {
+  const { friend_username } = req.body;
+  if (!friend_username?.trim()) return res.status(400).json({ error: 'Name is required' });
+  try {
+    const result = db.prepare(
+      'INSERT INTO friends (user_id, friend_username) VALUES (?, ?)'
+    ).run(req.user!.id, friend_username.trim());
+    return res.status(201).json({ id: result.lastInsertRowid, friend_username: friend_username.trim() });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('UNIQUE constraint')) return res.status(409).json({ error: 'Already in list' });
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.delete('/friends/:id', requireAuth, (req, res) => {
+  const result = db.prepare('DELETE FROM friends WHERE id = ? AND user_id = ?').run(req.params.id, req.user!.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Friend not found' });
+  return res.json({ message: 'Friend removed' });
+});
+
+// --- Links ---
+router.post('/links', requireAuth, (req, res) => {
+  const { link_label, link_url } = req.body;
+  if (!link_label?.trim() || !link_url?.trim()) return res.status(400).json({ error: 'Label and URL are required' });
+  const row = db.prepare('SELECT MAX(sort_order) as m FROM profile_links WHERE user_id = ?').get(req.user!.id) as { m: number | null };
+  const nextOrder = (row.m ?? -1) + 1;
+  const result = db.prepare(
+    'INSERT INTO profile_links (user_id, link_label, link_url, sort_order) VALUES (?, ?, ?, ?)'
+  ).run(req.user!.id, link_label.trim(), link_url.trim(), nextOrder);
+  return res.status(201).json({ id: result.lastInsertRowid, link_label: link_label.trim(), link_url: link_url.trim(), sort_order: nextOrder });
+});
+
+router.delete('/links/:id', requireAuth, (req, res) => {
+  const result = db.prepare('DELETE FROM profile_links WHERE id = ? AND user_id = ?').run(req.params.id, req.user!.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Link not found' });
+  return res.json({ message: 'Link removed' });
+});
+
+// --- Custom fields ---
+router.post('/fields', requireAuth, (req, res) => {
+  const { field_name } = req.body;
+  if (!field_name?.trim()) return res.status(400).json({ error: 'Field name is required' });
+  const row = db.prepare('SELECT MAX(sort_order) as m FROM custom_fields WHERE user_id = ?').get(req.user!.id) as { m: number | null };
+  const nextOrder = (row.m ?? -1) + 1;
+  const result = db.prepare(
+    'INSERT INTO custom_fields (user_id, field_name, sort_order) VALUES (?, ?, ?)'
+  ).run(req.user!.id, field_name.trim(), nextOrder);
+  return res.status(201).json({ id: result.lastInsertRowid, field_name: field_name.trim(), sort_order: nextOrder, entries: [] });
+});
+
+router.put('/fields/:id', requireAuth, (req, res) => {
+  const { field_name } = req.body;
+  if (!field_name?.trim()) return res.status(400).json({ error: 'Field name is required' });
+  const result = db.prepare('UPDATE custom_fields SET field_name = ? WHERE id = ? AND user_id = ?').run(field_name.trim(), req.params.id, req.user!.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Field not found' });
+  return res.json({ message: 'Field renamed' });
+});
+
+router.delete('/fields/:id', requireAuth, (req, res) => {
+  const result = db.prepare('DELETE FROM custom_fields WHERE id = ? AND user_id = ?').run(req.params.id, req.user!.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Field not found' });
+  return res.json({ message: 'Field deleted' });
+});
+
+router.post('/fields/:fieldId/entries', requireAuth, (req, res) => {
+  const { value, entry_status } = req.body;
+  if (!value?.trim()) return res.status(400).json({ error: 'Value is required' });
+  const field = db.prepare('SELECT id FROM custom_fields WHERE id = ? AND user_id = ?').get(req.params.fieldId, req.user!.id);
+  if (!field) return res.status(404).json({ error: 'Field not found' });
+  const row = db.prepare('SELECT MAX(sort_order) as m FROM custom_field_entries WHERE field_id = ?').get(req.params.fieldId) as { m: number | null };
+  const nextOrder = (row.m ?? -1) + 1;
+  const result = db.prepare(
+    'INSERT INTO custom_field_entries (field_id, user_id, value, entry_status, sort_order) VALUES (?, ?, ?, ?, ?)'
+  ).run(req.params.fieldId, req.user!.id, value.trim(), entry_status?.trim() || null, nextOrder);
+  return res.status(201).json({ id: result.lastInsertRowid, value: value.trim(), entry_status: entry_status?.trim() || null, preference: null, sort_order: nextOrder });
+});
+
+router.put('/fields/:fieldId/entries/:entryId', requireAuth, (req, res) => {
+  const { value, entry_status, preference } = req.body;
+  if (value !== undefined) {
+    if (!value?.trim()) return res.status(400).json({ error: 'Value is required' });
+    const result = db.prepare(
+      'UPDATE custom_field_entries SET value = ?, entry_status = ? WHERE id = ? AND user_id = ?'
+    ).run(value.trim(), entry_status?.trim() || null, req.params.entryId, req.user!.id);
+    if (result.changes === 0) return res.status(404).json({ error: 'Entry not found' });
+  }
+  if (preference !== undefined) {
+    const allowed = [null, 'favorite', 'okay'];
+    if (!allowed.includes(preference ?? null)) return res.status(400).json({ error: 'Invalid preference' });
+    db.prepare('UPDATE custom_field_entries SET preference = ? WHERE id = ? AND user_id = ?').run(preference ?? null, req.params.entryId, req.user!.id);
+  }
+  return res.json({ message: 'Entry updated' });
+});
+
+router.delete('/fields/:fieldId/entries/:entryId', requireAuth, (req, res) => {
+  const result = db.prepare('DELETE FROM custom_field_entries WHERE id = ? AND user_id = ?').run(req.params.entryId, req.user!.id);
+  if (result.changes === 0) return res.status(404).json({ error: 'Entry not found' });
+  return res.json({ message: 'Entry removed' });
+});
+
+export default router;

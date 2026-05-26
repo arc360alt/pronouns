@@ -1,0 +1,39 @@
+import { Router, Request } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
+import { requireAuth } from '../middleware/auth';
+
+const router = Router();
+
+const UPLOADS_DIR = path.join(__dirname, '../../../uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: UPLOADS_DIR,
+  filename: (_req: Request, file: Express.Multer.File, cb: (err: Error | null, filename: string) => void) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${crypto.randomBytes(16).toString('hex')}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    if (allowed.includes(path.extname(file.originalname).toLowerCase())) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed (jpg, png, gif, webp)'));
+    }
+  }
+});
+
+router.post('/', requireAuth, upload.single('file'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  return res.json({ url: `/uploads/${req.file.filename}` });
+});
+
+export default router;
