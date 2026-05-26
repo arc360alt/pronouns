@@ -178,6 +178,7 @@ db.exec(`
 `);
 
 export const BADGE_DEFS = [
+  { id: 'owner',           name: 'Pronouns.sbs Owner', icon: 'fa-solid fa-crown',  color: '#2752e0', description: 'Platform administrator' },
   { id: 'admin',           name: 'Admin',              icon: 'fa-solid fa-shield-halved',  color: '#e07a27', description: 'Platform administrator' },
   { id: 'og',              name: 'OG',                 icon: 'fa-solid fa-star',           color: '#f5c518', description: 'Joined before June 25, 2026' },
   { id: 'friend_of_owner', name: 'Friend of Owner',    icon: 'fa-solid fa-heart',          color: '#e05c7a', description: 'Personal friend of the owner' },
