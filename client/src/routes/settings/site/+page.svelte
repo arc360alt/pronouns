@@ -174,43 +174,27 @@
     const allHistory = chatMessages
       .slice(0, -1)
       .map(m => ({ role: m.role === 'ai' ? 'model' : 'user' as const, text: m.text }));
-    // Gemini requires history to start with 'user'
     const firstUser = allHistory.findIndex(m => m.role === 'user');
     const history = firstUser >= 0 ? allHistory.slice(firstUser) : [];
 
     try {
-      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
-      const response = await fetch('/api/sitebuilder/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ message: text, history }),
-      });
-      if (!response.ok || !response.body) throw new Error('Request failed');
+      const { jobId } = await api.post<{ jobId: string }>('/api/sitebuilder/ai/chat', { message: text, history });
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-      let res: { reply: string; actions: FileAction[]; files: SiteFile[]; remaining: number } | null = null;
-      outer: while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop()!;
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const parsed = JSON.parse(line.slice(6)) as { error?: string; reply?: string; actions?: FileAction[]; files?: SiteFile[]; remaining?: number };
-          if (parsed.error) throw new Error(parsed.error);
-          res = parsed as typeof res;
-          break outer;
-        }
+      type JobResult = { reply: string; actions: FileAction[]; files: SiteFile[]; remaining: number };
+      type PollResponse = { status: 'pending' | 'done' | 'error'; result?: JobResult; error?: string };
+
+      let res: JobResult | null = null;
+      while (true) {
+        await new Promise(r => setTimeout(r, 2000));
+        const poll = await api.get<PollResponse>(`/api/sitebuilder/ai/status/${jobId}`);
+        if (poll.status === 'error') throw new Error(poll.error ?? 'AI processing failed');
+        if (poll.status === 'done') { res = poll.result ?? null; break; }
       }
       if (!res) throw new Error('No response received');
 
       chatMessages = [...chatMessages, { role: 'ai', text: res.reply, actions: res.actions }];
       aiRemaining = res.remaining;
       if (res.files) files = res.files;
-      // Sync editor if AI touched the currently open file
       if (selectedFile && res.actions?.length) {
         const action = res.actions.find(a => a.filename === selectedFile!.filename);
         if (action) {

@@ -597,10 +597,31 @@ router.delete('/files/:id', requireAuth, (req, res) => {
 
 // ── AI chat ───────────────────────────────────────────────────────────────────
 
+type JobResult = { reply: string; actions: FileAction[]; files: unknown[]; remaining: number };
+type Job = { status: 'pending' | 'done' | 'error'; result?: JobResult; error?: string; createdAt: number };
+const aiJobs = new Map<string, Job>();
+
+// Clean up jobs older than 15 minutes
+setInterval(() => {
+  const cutoff = Date.now() - 15 * 60 * 1000;
+  for (const [id, job] of aiJobs) {
+    if (job.createdAt < cutoff) aiJobs.delete(id);
+  }
+}, 5 * 60 * 1000);
+
 router.get('/ai/usage', requireAuth, (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   const row = db.prepare('SELECT count FROM ai_usage WHERE user_id = ? AND date = ?').get(req.user!.id, today) as { count: number } | undefined;
   return res.json({ used: row?.count ?? 0, limit: AI_DAILY_LIMIT, remaining: AI_DAILY_LIMIT - (row?.count ?? 0) });
+});
+
+router.get('/ai/status/:jobId', requireAuth, (req, res) => {
+  const job = aiJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  if (job.status === 'pending') return res.json({ status: 'pending' });
+  aiJobs.delete(req.params.jobId);
+  if (job.status === 'error') return res.status(500).json({ status: 'error', error: job.error });
+  return res.json({ status: 'done', ...job.result });
 });
 
 router.post('/ai/chat', requireAuth, async (req, res) => {
@@ -617,153 +638,133 @@ router.post('/ai/chat', requireAuth, async (req, res) => {
   };
   if (!message?.trim()) return res.status(400).json({ error: 'Message required' });
 
-  // SSE — keeps Cloudflare alive during long Ollama requests (avoids 524 timeout)
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
+  // Return a job ID immediately so Cloudflare never times out on this request.
+  // The client polls /ai/status/:jobId until done.
+  const jobId = crypto.randomUUID();
+  aiJobs.set(jobId, { status: 'pending', createdAt: Date.now() });
+  res.json({ jobId });
 
-  const sendEvent = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
-  const heartbeat = setInterval(() => res.write(': ping\n\n'), 15000);
+  // Process Ollama in the background — res is already sent with jobId above
+  const userId = req.user!.id;
+  void (async () => {
+    try {
+      const files = db.prepare('SELECT id, filename, filetype FROM site_files WHERE user_id = ? ORDER BY filetype, filename').all(userId) as FileRow[];
+      const htmlCount = files.filter(f => f.filetype === 'html').length;
+      const cssCount  = files.filter(f => f.filetype === 'css').length;
+      const jsCount   = files.filter(f => f.filetype === 'js').length;
 
-  const files = db.prepare('SELECT id, filename, filetype FROM site_files WHERE user_id = ? ORDER BY filetype, filename').all(req.user!.id) as FileRow[];
-  const htmlCount = files.filter(f => f.filetype === 'html').length;
-  const cssCount = files.filter(f => f.filetype === 'css').length;
-  const jsCount  = files.filter(f => f.filetype === 'js').length;
+      const messages: OllamaMessage[] = [
+        { role: 'system', content: buildSystemPrompt(files, htmlCount, cssCount, jsCount) },
+        ...history.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text })),
+        { role: 'user', content: message.trim() },
+      ];
 
-  try {
-    const messages: OllamaMessage[] = [
-      { role: 'system', content: buildSystemPrompt(files, htmlCount, cssCount, jsCount) },
-      ...history.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text })),
-      { role: 'user', content: message.trim() },
-    ];
+      const actions: FileAction[] = [];
+      let reply = '';
+      const writtenFiles = new Set<string>();
 
-    const actions: FileAction[] = [];
-    let reply = '';
-    const writtenFiles = new Set<string>(); // prevent the model looping on the same file
+      for (let i = 0; i < 10; i++) {
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), 5 * 60 * 1000);
+        let resp: Response;
+        try {
+          resp = await fetch(`${OLLAMA_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: OLLAMA_MODEL, messages, tools: FILE_TOOLS, stream: false }),
+            signal: ac.signal,
+          });
+        } catch (e) {
+          if ((e as Error).name === 'AbortError') throw new Error('Ollama timed out after 5 minutes');
+          throw e;
+        } finally {
+          clearTimeout(timer);
+        }
+        if (!resp.ok) throw new Error(`Ollama ${resp.status}: ${await resp.text()}`);
 
-    for (let i = 0; i < 10; i++) {
-      const ac = new AbortController();
-      const timer = setTimeout(() => ac.abort(), 5 * 60 * 1000); // 5 min per call
-      let resp: Response;
-      try {
-        resp = await fetch(`${OLLAMA_URL}/api/chat`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: OLLAMA_MODEL, messages, tools: FILE_TOOLS, stream: false }),
-          signal: ac.signal,
-        });
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') throw new Error('Ollama timed out after 5 minutes');
-        throw e;
-      } finally {
-        clearTimeout(timer);
-      }
-      if (!resp.ok) throw new Error(`Ollama ${resp.status}: ${await resp.text()}`);
+        const data = await resp.json() as { message: OllamaMessage };
+        const msg = data.message;
+        messages.push(msg);
 
-      const data = await resp.json() as { message: OllamaMessage };
-      const msg = data.message;
-      messages.push(msg);
+        if (!msg.tool_calls?.length) {
+          const rawContent = msg.content ?? '';
+          const rawCalls = extractRawToolCalls(rawContent);
 
-      if (!msg.tool_calls?.length) {
-        const rawContent = msg.content ?? '';
-        const rawCalls = extractRawToolCalls(rawContent);
-
-        if (rawCalls.length > 0) {
-          // Model put raw JSON in text instead of using tool_calls — fix the conversation
-          // structure so Ollama sees a proper tool-call flow, then loop again.
-          messages.pop();
-          messages.push({
-            role: 'assistant',
-            content: '',
-            tool_calls: rawCalls.map(c => ({ function: { name: c.name, arguments: c.args } })),
-          } as OllamaMessage);
-
-          for (const { name, args } of rawCalls) {
-            const isWrite = ['create_file', 'update_file', 'delete_file'].includes(name);
-            if (isWrite && args.filename && writtenFiles.has(args.filename)) {
-              messages.push({ role: 'tool', tool_name: name, content: `${args.filename} was already updated. Move on.` });
-              continue;
+          if (rawCalls.length > 0) {
+            messages.pop();
+            messages.push({
+              role: 'assistant',
+              content: '',
+              tool_calls: rawCalls.map(c => ({ function: { name: c.name, arguments: c.args } })),
+            } as OllamaMessage);
+            for (const { name, args } of rawCalls) {
+              const isWrite = ['create_file', 'update_file', 'delete_file'].includes(name);
+              if (isWrite && args.filename && writtenFiles.has(args.filename)) {
+                messages.push({ role: 'tool', tool_name: name, content: `${args.filename} was already updated. Move on.` });
+                continue;
+              }
+              const { response: toolResp, action } = executeTool(name, args, userId);
+              if (action) { actions.push(action); writtenFiles.add(action.filename); }
+              messages.push({ role: 'tool', tool_name: name, content: JSON.stringify(toolResp) });
             }
-            const { response: toolResp, action } = executeTool(name, args, req.user!.id);
-            if (action) { actions.push(action); writtenFiles.add(action.filename); }
-            messages.push({ role: 'tool', tool_name: name, content: JSON.stringify(toolResp) });
+            continue;
           }
-          continue;
+
+          reply = rawContent;
+          break;
         }
 
-        reply = rawContent;
-        break;
-      }
-
-      for (const call of msg.tool_calls) {
-        const name = call.function.name;
-        const args = typeof call.function.arguments === 'string'
-          ? JSON.parse(call.function.arguments) as Record<string, string>
-          : call.function.arguments;
-
-        // Skip write ops on files already handled this turn — stops the model looping
-        const isWrite = ['create_file', 'update_file', 'delete_file'].includes(name);
-        if (isWrite && args.filename && writtenFiles.has(args.filename)) {
-          messages.push({ role: 'tool', tool_name: name, content: `${args.filename} was already updated this session. Move on to the next file.` });
-          continue;
+        for (const call of msg.tool_calls) {
+          const name = call.function.name;
+          const args = typeof call.function.arguments === 'string'
+            ? JSON.parse(call.function.arguments) as Record<string, string>
+            : call.function.arguments;
+          const isWrite = ['create_file', 'update_file', 'delete_file'].includes(name);
+          if (isWrite && args.filename && writtenFiles.has(args.filename)) {
+            messages.push({ role: 'tool', tool_name: name, content: `${args.filename} was already updated this session. Move on to the next file.` });
+            continue;
+          }
+          const { response: toolResp, action } = executeTool(name, args, userId);
+          if (action) { actions.push(action); writtenFiles.add(action.filename); }
+          messages.push({ role: 'tool', tool_name: name, content: JSON.stringify(toolResp) });
         }
+      }
 
-        const { response: toolResp, action } = executeTool(name, args, req.user!.id);
-        if (action) {
-          actions.push(action);
-          writtenFiles.add(action.filename);
+      // Fallback 1: fenced code blocks
+      if (actions.length === 0 && reply.includes('```')) {
+        const fallback = applyCodeBlocks(reply, userId, files);
+        actions.push(...fallback);
+        if (fallback.length > 0) {
+          reply = reply.replace(/```(?:\w+)?[ \t]*\n[\s\S]*?```/g, '').replace(/\n{3,}/g, '\n\n').trim();
+          if (!reply) reply = `Done! Applied changes to: ${fallback.map(a => a.filename).join(', ')}.`;
         }
-        messages.push({ role: 'tool', tool_name: name, content: JSON.stringify(toolResp) });
       }
-    }
 
-    // Fallback 1: model sent fenced code blocks as plain text
-    if (actions.length === 0 && reply.includes('```')) {
-      const fallback = applyCodeBlocks(reply, req.user!.id, files);
-      actions.push(...fallback);
-      if (fallback.length > 0) {
-        reply = reply.replace(/```(?:\w+)?[ \t]*\n[\s\S]*?```/g, '').replace(/\n{3,}/g, '\n\n').trim();
-        if (!reply) reply = `Done! Applied changes to: ${fallback.map(a => a.filename).join(', ')}.`;
+      // Fallback 2: raw JSON blobs
+      if (actions.length === 0) {
+        const { actions: jsonActions, stripped } = applyJsonToolCalls(reply, userId);
+        actions.push(...jsonActions);
+        if (jsonActions.length > 0) reply = stripped || `Done! Applied changes to: ${jsonActions.map(a => a.filename).join(', ')}.`;
       }
+
+      if (!reply.trim() && actions.length > 0) reply = `Done! Changes: ${actions.map(a => `${a.type} ${a.filename}`).join(', ')}.`;
+      else if (!reply.trim()) reply = 'Done!';
+
+      db.prepare(`
+        INSERT INTO ai_usage (user_id, date, count) VALUES (?, ?, 1)
+        ON CONFLICT(user_id, date) DO UPDATE SET count = count + 1
+      `).run(userId, today);
+
+      const updatedFiles = db.prepare(
+        'SELECT id, filename, filetype, updated_at FROM site_files WHERE user_id = ? ORDER BY filetype, filename'
+      ).all(userId);
+
+      aiJobs.set(jobId, { status: 'done', createdAt: Date.now(), result: { reply, actions, files: updatedFiles, remaining: AI_DAILY_LIMIT - used - 1 } });
+    } catch (err) {
+      console.error('AI error:', err);
+      aiJobs.set(jobId, { status: 'error', createdAt: Date.now(), error: err instanceof Error ? err.message : 'AI request failed' });
     }
-
-    // Fallback 2: model sent raw JSON tool-call blobs as plain text (no code fences)
-    if (actions.length === 0) {
-      const { actions: jsonActions, stripped } = applyJsonToolCalls(reply, req.user!.id);
-      actions.push(...jsonActions);
-      if (jsonActions.length > 0) {
-        reply = stripped || `Done! Applied changes to: ${jsonActions.map(a => a.filename).join(', ')}.`;
-      }
-    }
-
-    if (!reply.trim() && actions.length > 0) {
-      reply = `Done! Changes: ${actions.map(a => `${a.type} ${a.filename}`).join(', ')}.`;
-    } else if (!reply.trim()) {
-      reply = 'Done!';
-    }
-
-    // Increment usage
-    db.prepare(`
-      INSERT INTO ai_usage (user_id, date, count) VALUES (?, ?, 1)
-      ON CONFLICT(user_id, date) DO UPDATE SET count = count + 1
-    `).run(req.user!.id, today);
-
-    // Refresh file list so client can sync
-    const updatedFiles = db.prepare(
-      'SELECT id, filename, filetype, updated_at FROM site_files WHERE user_id = ? ORDER BY filetype, filename'
-    ).all(req.user!.id);
-
-    clearInterval(heartbeat);
-    sendEvent({ reply, actions, files: updatedFiles, remaining: AI_DAILY_LIMIT - used - 1 });
-    res.end();
-  } catch (err) {
-    clearInterval(heartbeat);
-    console.error('AI error:', err);
-    const msg = err instanceof Error ? err.message : 'AI request failed';
-    sendEvent({ error: msg });
-    res.end();
-  }
+  })();
 });
 
 // Public: serve a user's site file
