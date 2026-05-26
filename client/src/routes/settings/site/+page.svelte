@@ -179,10 +179,34 @@
     const history = firstUser >= 0 ? allHistory.slice(firstUser) : [];
 
     try {
-      const res = await api.post<{ reply: string; actions: FileAction[]; files: SiteFile[]; remaining: number }>(
-        '/api/sitebuilder/ai/chat',
-        { message: text, history }
-      );
+      const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+      const response = await fetch('/api/sitebuilder/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ message: text, history }),
+      });
+      if (!response.ok || !response.body) throw new Error('Request failed');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let res: { reply: string; actions: FileAction[]; files: SiteFile[]; remaining: number } | null = null;
+      outer: while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop()!;
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const parsed = JSON.parse(line.slice(6)) as { error?: string; reply?: string; actions?: FileAction[]; files?: SiteFile[]; remaining?: number };
+          if (parsed.error) throw new Error(parsed.error);
+          res = parsed as typeof res;
+          break outer;
+        }
+      }
+      if (!res) throw new Error('No response received');
+
       chatMessages = [...chatMessages, { role: 'ai', text: res.reply, actions: res.actions }];
       aiRemaining = res.remaining;
       if (res.files) files = res.files;

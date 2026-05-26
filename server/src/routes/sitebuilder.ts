@@ -617,6 +617,15 @@ router.post('/ai/chat', requireAuth, async (req, res) => {
   };
   if (!message?.trim()) return res.status(400).json({ error: 'Message required' });
 
+  // SSE — keeps Cloudflare alive during long Ollama requests (avoids 524 timeout)
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const sendEvent = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 15000);
+
   const files = db.prepare('SELECT id, filename, filetype FROM site_files WHERE user_id = ? ORDER BY filetype, filename').all(req.user!.id) as FileRow[];
   const htmlCount = files.filter(f => f.filetype === 'html').length;
   const cssCount = files.filter(f => f.filetype === 'css').length;
@@ -745,16 +754,15 @@ router.post('/ai/chat', requireAuth, async (req, res) => {
       'SELECT id, filename, filetype, updated_at FROM site_files WHERE user_id = ? ORDER BY filetype, filename'
     ).all(req.user!.id);
 
-    return res.json({
-      reply,
-      actions,
-      files: updatedFiles,
-      remaining: AI_DAILY_LIMIT - used - 1,
-    });
+    clearInterval(heartbeat);
+    sendEvent({ reply, actions, files: updatedFiles, remaining: AI_DAILY_LIMIT - used - 1 });
+    res.end();
   } catch (err) {
+    clearInterval(heartbeat);
     console.error('AI error:', err);
     const msg = err instanceof Error ? err.message : 'AI request failed';
-    return res.status(500).json({ error: msg });
+    sendEvent({ error: msg });
+    res.end();
   }
 });
 
