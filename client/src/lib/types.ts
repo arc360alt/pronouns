@@ -5,6 +5,9 @@ export interface User {
   is_admin: boolean;
   is_banned: boolean;
   created_at?: string;
+  google_id?: string | null;
+  has_password?: boolean;
+  username_changed_at?: string | null;
 }
 
 export interface ProfileName {

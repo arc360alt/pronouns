@@ -130,6 +130,8 @@ addCol('profiles', 'banner_height', 'INTEGER DEFAULT 240');
 addCol('profiles', 'avatar_size', 'INTEGER DEFAULT 120');
 addCol('profiles', 'show_site', 'INTEGER DEFAULT 0');
 addCol('profiles', 'section_order', 'TEXT');
+addCol('users', 'google_id', 'TEXT');
+addCol('users', 'username_changed_at', 'TEXT');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS site_settings (

@@ -14,22 +14,65 @@
   let captchaContainer: HTMLDivElement;
   let captchaWidgetId: string | null = null;
 
-  onMount(() => {
-    if (!captchaContainer) return;
-    function render() {
-      if (typeof turnstile !== 'undefined' && captchaContainer) {
-        try {
-          captchaWidgetId = turnstile.render(captchaContainer, {
-            sitekey: siteKey,
-            callback: (token: string) => { captchaToken = token; },
-            'expired-callback': () => { captchaToken = ''; }
-          });
-        } catch { /* already rendered */ }
-      } else {
-        setTimeout(render, 200);
+  let googleClientId = $state('');
+  let googleBtnContainer: HTMLDivElement;
+  let googleLoading = $state(false);
+
+  onMount(async () => {
+    if (captchaContainer) {
+      function renderCaptcha() {
+        if (typeof turnstile !== 'undefined' && captchaContainer) {
+          try {
+            captchaWidgetId = turnstile.render(captchaContainer, {
+              sitekey: siteKey,
+              callback: (token: string) => { captchaToken = token; },
+              'expired-callback': () => { captchaToken = ''; }
+            });
+          } catch { /* already rendered */ }
+        } else {
+          setTimeout(renderCaptcha, 200);
+        }
       }
+      renderCaptcha();
     }
-    render();
+
+    try {
+      const cfg = await api.get<{ googleClientId: string | null }>('/api/auth/config');
+      if (cfg.googleClientId) {
+        googleClientId = cfg.googleClientId;
+      }
+    } catch { /* no google config */ }
+  });
+
+  function handleGoogleCredential(response: { credential: string }) {
+    googleLoading = true;
+    error = '';
+    (async () => {
+      try {
+        const body: Record<string, unknown> = { credential: response.credential };
+        if (captchaToken) body.captchaToken = captchaToken;
+        const res = await api.post<{ token: string; user: import('$lib/types').User }>('/api/auth/google', body);
+        localStorage.setItem('token', res.token);
+        user.set(res.user);
+        goto('/@' + res.user.username);
+      } catch (err) {
+        error = err instanceof Error ? err.message : 'Google sign in failed';
+      } finally {
+        googleLoading = false;
+      }
+    })();
+  }
+
+  $effect(() => {
+    if (googleClientId && googleBtnContainer && typeof google !== 'undefined' && google.accounts?.id) {
+      google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleCredential
+      });
+      try {
+        google.accounts.id.renderButton(googleBtnContainer, { theme: 'outline', size: 'large', width: 300 });
+      } catch { /* already rendered */ }
+    }
   });
 
   async function handleSubmit(e: Event) {
@@ -83,6 +126,15 @@
         {loading ? 'Logging in…' : 'Log in'}
       </button>
     </form>
+
+    {#if googleClientId}
+      <hr style="margin:1rem 0" />
+      <p style="text-align:center;font-size:14px;color:var(--text-muted);margin-bottom:0.75rem">or sign in with</p>
+      <div style="display:flex;justify-content:center">
+        <div bind:this={googleBtnContainer}></div>
+      </div>
+      {#if googleLoading}<p style="text-align:center;font-size:13px;color:var(--text-muted);margin-top:0.5rem">Signing in with Google…</p>{/if}
+    {/if}
   </div>
   <p style="margin-top:1rem;text-align:center;font-size:14px;color:var(--text-muted)">
     No account? <a href="/register">Register</a>

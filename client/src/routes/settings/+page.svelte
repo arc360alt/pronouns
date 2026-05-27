@@ -12,11 +12,34 @@
   let success = $state('');
   let loading = $state(false);
 
+  let newUsername = $state('');
+  let usernameError = $state('');
+  let usernameSuccess = $state('');
+  let usernameLoading = $state(false);
+  let cooldownDays = $state(0);
+
+  let googleClientId = $state('');
+  let googleLinkBtnContainer: HTMLDivElement;
+  let googleLinking = $state(false);
+
   onMount(async () => {
     const me = await waitForUser();
     if (!me) { goto('/login'); return; }
     email = me.email;
+    newUsername = me.username;
+    calcCooldown(me.username_changed_at);
+
+    try {
+      const cfg = await api.get<{ googleClientId: string | null }>('/api/auth/config');
+      if (cfg.googleClientId) googleClientId = cfg.googleClientId;
+    } catch { /* no google config */ }
   });
+
+  function calcCooldown(changedAt: string | null | undefined) {
+    if (!changedAt) { cooldownDays = 0; return; }
+    const elapsed = (Date.now() - new Date(changedAt).getTime()) / 86400000;
+    cooldownDays = Math.max(0, 7 - Math.ceil(elapsed));
+  }
 
   async function handleSave(e: Event) {
     e.preventDefault();
@@ -42,6 +65,52 @@
     }
   }
 
+  async function handleUsernameChange(e: Event) {
+    e.preventDefault();
+    usernameError = ''; usernameSuccess = '';
+    if (!newUsername || newUsername === $user?.username) return;
+    usernameLoading = true;
+    try {
+      const res = await api.put<{ token: string; username: string; username_changed_at: string }>('/api/auth/username', { username: newUsername });
+      localStorage.setItem('token', res.token);
+      user.update(u => u ? { ...u, username: res.username, username_changed_at: res.username_changed_at } : u);
+      usernameSuccess = 'Username changed successfully';
+      calcCooldown(res.username_changed_at);
+    } catch (err) {
+      usernameError = err instanceof Error ? err.message : 'Failed to change username';
+    } finally {
+      usernameLoading = false;
+    }
+  }
+
+  function handleGoogleLinkCredential(response: { credential: string }) {
+    googleLinking = true;
+    error = '';
+    (async () => {
+      try {
+        const res = await api.post<{ message: string; user: import('$lib/types').User }>('/api/auth/google/link', { credential: response.credential });
+        user.update(u => u ? { ...u, google_id: res.user.google_id } : u);
+        success = 'Google account linked successfully';
+      } catch (err) {
+        error = err instanceof Error ? err.message : 'Failed to link Google account';
+      } finally {
+        googleLinking = false;
+      }
+    })();
+  }
+
+  $effect(() => {
+    if (googleClientId && googleLinkBtnContainer && typeof google !== 'undefined' && google.accounts?.id) {
+      google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleLinkCredential
+      });
+      try {
+        google.accounts.id.renderButton(googleLinkBtnContainer, { theme: 'outline', size: 'large', width: 300 });
+      } catch { /* already rendered */ }
+    }
+  });
+
   function logout() {
     localStorage.removeItem('token');
     user.set(null);
@@ -64,7 +133,33 @@
     </a>
   </div>
 
+  <!-- Username -->
   <div class="card">
+    <p class="section-title" style="margin-bottom:0.75rem">Username</p>
+    <form onsubmit={handleUsernameChange}>
+      <div class="form-group">
+        <label class="form-label" for="username">Username</label>
+        <input id="username" type="text" bind:value={newUsername} autocomplete="username"
+          placeholder="letters, numbers, _ and -" required minlength="3" maxlength="30"
+          pattern="^[a-zA-Z0-9_-]+$" />
+        {#if cooldownDays > 0}
+          <small style="font-size:12px;color:var(--warning)">
+            You can change your username again in {cooldownDays} day{cooldownDays === 1 ? '' : 's'}
+          </small>
+        {:else if $user?.username_changed_at}
+          <small style="font-size:12px;color:var(--success)">You can change your username now</small>
+        {/if}
+      </div>
+      {#if usernameError}<p class="msg-error">{usernameError}</p>{/if}
+      {#if usernameSuccess}<p class="msg-success">{usernameSuccess}</p>{/if}
+      <button type="submit" class="btn btn-primary" style="margin-top:0.5rem" disabled={usernameLoading || cooldownDays > 0 || newUsername === $user?.username}>
+        {usernameLoading ? 'Saving…' : 'Change username'}
+      </button>
+    </form>
+  </div>
+
+  <!-- Email & Password -->
+  <div class="card" style="margin-top:1rem">
     <form onsubmit={handleSave}>
       <div class="form-group">
         <label class="form-label" for="email">Email</label>
@@ -75,19 +170,32 @@
 
       <p class="form-label" style="margin-bottom:0.75rem">Change password</p>
       <div class="form-group">
-        <label class="form-label" for="current-pw">Current password <span style="color:var(--danger)">*</span></label>
-        <input id="current-pw" type="password" bind:value={currentPassword} autocomplete="current-password" required />
-        <small style="font-size:12px;color:var(--text-muted)">Required to save any changes</small>
+        <label class="form-label" for="current-pw">
+          {#if $user?.has_password}
+            Current password <span style="color:var(--danger)">*</span>
+          {:else}
+            New password
+          {/if}
+        </label>
+        <input id="current-pw" type="password" bind:value={currentPassword} autocomplete="current-password"
+          required={!!$user?.has_password} placeholder={$user?.has_password ? '' : 'No password set — enter a new one'} />
+        {#if $user?.has_password}
+          <small style="font-size:12px;color:var(--text-muted)">Required to save any changes</small>
+        {:else}
+          <small style="font-size:12px;color:var(--text-muted)">Set a password to enable email/password login</small>
+        {/if}
       </div>
-      <div class="form-group">
-        <label class="form-label" for="new-pw">New password</label>
-        <input id="new-pw" type="password" bind:value={newPassword} autocomplete="new-password" placeholder="Leave blank to keep current" />
-      </div>
-      {#if newPassword}
+      {#if $user?.has_password}
         <div class="form-group">
-          <label class="form-label" for="confirm-pw">Confirm new password</label>
-          <input id="confirm-pw" type="password" bind:value={confirmPassword} autocomplete="new-password" />
+          <label class="form-label" for="new-pw">New password</label>
+          <input id="new-pw" type="password" bind:value={newPassword} autocomplete="new-password" placeholder="Leave blank to keep current" />
         </div>
+        {#if newPassword}
+          <div class="form-group">
+            <label class="form-label" for="confirm-pw">Confirm new password</label>
+            <input id="confirm-pw" type="password" bind:value={confirmPassword} autocomplete="new-password" />
+          </div>
+        {/if}
       {/if}
 
       {#if error}<p class="msg-error">{error}</p>{/if}
@@ -99,6 +207,26 @@
     </form>
   </div>
 
+  <!-- Google account -->
+  {#if googleClientId}
+    <div class="card" style="margin-top:1rem">
+      <p class="section-title" style="margin-bottom:0.75rem">Google Account</p>
+      {#if $user?.google_id}
+        <p style="font-size:14px;color:var(--success);margin-bottom:0.5rem">
+          <i class="fa-brands fa-google"></i> Google account linked
+        </p>
+        <small style="font-size:12px;color:var(--text-muted)">You can sign in with Google</small>
+      {:else}
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:0.75rem">Link your Google account for easy sign-in</p>
+        <div style="display:flex;justify-content:center">
+          <div bind:this={googleLinkBtnContainer}></div>
+        </div>
+        {#if googleLinking}<p style="text-align:center;font-size:13px;color:var(--text-muted);margin-top:0.5rem">Linking Google account…</p>{/if}
+      {/if}
+    </div>
+  {/if}
+
+  <!-- Session -->
   <div class="card" style="margin-top:1rem">
     <p class="section-title" style="margin-bottom:0.75rem">Session</p>
     <button class="btn btn-secondary" onclick={logout}>Log out of all sessions</button>
