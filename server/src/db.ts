@@ -185,6 +185,7 @@ export const BADGE_DEFS = [
   { id: 'og',              name: 'OG',                 icon: 'fa-solid fa-star',           color: '#f5c518', description: 'Joined before June 25, 2026' },
   { id: 'friend_of_owner', name: 'Friend of Owner',    icon: 'fa-solid fa-heart',          color: '#e05c7a', description: 'Personal friend of the owner' },
   { id: 'one_year',        name: '1+ Year of Service', icon: 'fa-solid fa-calendar-check', color: '#4caf50', description: 'Member for over a year' },
+  { id: 'gif_badge',        name: 'Found out that you can use gifs as your banner', icon: 'fa-solid fa-calendar-check', color: '#4caf50', description: 'The name explains it all.' },
 ] as const;
 
 export type BadgeId = typeof BADGE_DEFS[number]['id'];
