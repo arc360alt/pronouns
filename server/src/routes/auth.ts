@@ -7,8 +7,28 @@ import { requireAuth } from '../middleware/auth';
 const router = Router();
 const JWT_SECRET = () => process.env.JWT_SECRET || 'fallback-secret';
 
+async function verifyCaptcha(token: string): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET;
+  if (!secret) return true;
+  try {
+    const params = new URLSearchParams({ secret, response: token });
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    });
+    const data = await res.json() as { success: boolean };
+    return data.success;
+  } catch {
+    return false;
+  }
+}
+
 router.post('/register', async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, captchaToken } = req.body;
+
+  if (!(await verifyCaptcha(captchaToken)))
+    return res.status(400).json({ error: 'Captcha verification failed. Please try again.' });
 
   if (!username || !email || !password)
     return res.status(400).json({ error: 'All fields are required' });
@@ -52,9 +72,12 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { login, password } = req.body;
+  const { login, password, captchaToken } = req.body;
   if (!login || !password)
     return res.status(400).json({ error: 'Username/email and password required' });
+
+  if (!(await verifyCaptcha(captchaToken)))
+    return res.status(400).json({ error: 'Captcha verification failed. Please try again.' });
 
   try {
     const user = db.prepare(
