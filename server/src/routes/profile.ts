@@ -11,8 +11,8 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 router.put('/', requireAuth, (req, res) => {
-  const { display_name, bio, gender, pronouns, custom_color, show_friends,
-          location, occupation, birthday, website, timezone,
+  const { display_name, bio, gender, pronouns, custom_color, custom_color_2, custom_color_dir,
+          show_friends, location, occupation, birthday, website, timezone,
           banner_height, avatar_size, show_site } = req.body;
   const clamp = (v: unknown, min: number, max: number, def: number) => {
     const n = parseInt(v as string);
@@ -21,13 +21,15 @@ router.put('/', requireAuth, (req, res) => {
   db.prepare(`
     UPDATE profiles SET
       display_name = ?, bio = ?, gender = ?, pronouns = ?,
-      custom_color = ?, show_friends = ?,
+      custom_color = ?, custom_color_2 = ?, custom_color_dir = ?,
+      show_friends = ?,
       location = ?, occupation = ?, birthday = ?, website = ?, timezone = ?,
       banner_height = ?, avatar_size = ?, show_site = ?
     WHERE user_id = ?
   `).run(
     display_name || null, bio || null, gender || null, pronouns || null,
-    custom_color || null, show_friends ? 1 : 0,
+    custom_color || null, custom_color_2 || null, custom_color_dir || '135deg',
+    show_friends ? 1 : 0,
     location || null, occupation || null, birthday || null, website || null, timezone || null,
     clamp(banner_height, 100, 400, 240), clamp(avatar_size, 60, 180, 120),
     show_site ? 1 : 0,
@@ -40,6 +42,15 @@ router.put('/section-order', requireAuth, (req, res) => {
   const { section_order } = req.body;
   if (typeof section_order !== 'string') return res.status(400).json({ error: 'section_order must be a string' });
   db.prepare('UPDATE profiles SET section_order = ? WHERE user_id = ?').run(section_order, req.user!.id);
+  return res.json({ ok: true });
+});
+
+router.put('/background', requireAuth, (req, res) => {
+  const { profile_bg, profile_bg_type } = req.body;
+  const allowed = ['none', 'color', 'gradient', 'image', 'video'];
+  const type = allowed.includes(profile_bg_type) ? profile_bg_type : 'none';
+  db.prepare('UPDATE profiles SET profile_bg = ?, profile_bg_type = ? WHERE user_id = ?')
+    .run(profile_bg || null, type, req.user!.id);
   return res.json({ ok: true });
 });
 

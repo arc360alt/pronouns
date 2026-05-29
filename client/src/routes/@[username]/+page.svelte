@@ -174,7 +174,10 @@
         let subtle = 'rgba(224,122,39,0.15)';
         const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c);
         if (m) subtle = `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},0.15)`;
-        customStyle = `--accent:${c};--accent-hover:${c};--accent-subtle:${subtle};`;
+        const accentBg = data.custom_color_2
+          ? `linear-gradient(${data.custom_color_dir || '135deg'}, ${c}, ${data.custom_color_2})`
+          : c;
+        customStyle = `--accent:${c};--accent-hover:${c};--accent-subtle:${subtle};--accent-bg:${accentBg};`;
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
@@ -220,7 +223,18 @@
     <a href="/" class="btn btn-secondary" style="margin-top:1rem">Go home</a>
   </div>
 {:else}
-  <div style={customStyle}>
+  <div
+    class={profile.profile_bg_type && profile.profile_bg_type !== 'none' ? 'has-profile-bg' : ''}
+    style={customStyle}
+  >
+    <!-- Profile background layer -->
+    {#if profile.profile_bg && profile.profile_bg_type === 'video'}
+      <video src={profile.profile_bg} autoplay loop muted playsinline class="profile-bg-video"></video>
+    {:else if profile.profile_bg && profile.profile_bg_type === 'image'}
+      <div class="profile-bg-fixed" style="background-image:url({profile.profile_bg})"></div>
+    {:else if profile.profile_bg && (profile.profile_bg_type === 'color' || profile.profile_bg_type === 'gradient')}
+      <div class="profile-bg-fixed" style="background:{profile.profile_bg}"></div>
+    {/if}
     <!-- Banner -->
     {#if profile.banner && isVideo(profile.banner)}
       <div class="profile-banner has-image" style="height:{bannerHeightPx}px;position:relative;overflow:hidden">

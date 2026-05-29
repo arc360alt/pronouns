@@ -86,6 +86,10 @@ export interface Profile {
   banner: string | null;
   banner_position: string | null;
   custom_color: string | null;
+  custom_color_2: string | null;
+  custom_color_dir: string;
+  profile_bg: string | null;
+  profile_bg_type: string;
   show_friends: boolean | number;
   show_site: boolean | number;
   site_enabled: boolean | number;

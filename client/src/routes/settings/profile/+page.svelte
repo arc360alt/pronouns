@@ -23,6 +23,9 @@
     catch { return ['America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Anchorage','America/Honolulu','America/Toronto','America/Vancouver','America/Sao_Paulo','America/Argentina/Buenos_Aires','Europe/London','Europe/Dublin','Europe/Lisbon','Europe/Paris','Europe/Berlin','Europe/Madrid','Europe/Rome','Europe/Amsterdam','Europe/Brussels','Europe/Vienna','Europe/Warsaw','Europe/Prague','Europe/Stockholm','Europe/Oslo','Europe/Copenhagen','Europe/Helsinki','Europe/Athens','Europe/Istanbul','Europe/Moscow','Europe/Kiev','Africa/Cairo','Africa/Johannesburg','Africa/Lagos','Africa/Nairobi','Asia/Dubai','Asia/Karachi','Asia/Kolkata','Asia/Dhaka','Asia/Bangkok','Asia/Singapore','Asia/Hong_Kong','Asia/Shanghai','Asia/Tokyo','Asia/Seoul','Asia/Jakarta','Australia/Perth','Australia/Adelaide','Australia/Sydney','Australia/Melbourne','Pacific/Auckland','Pacific/Fiji','UTC']; }
   })();
   let customColor = $state('');
+  let customColor2 = $state('');
+  let customColorDir = $state('135deg');
+  let accentGradient = $state(false);
   let showFriends = $state(true);
   let showSite = $state(false);
   let siteEnabled = $state(false);
@@ -179,6 +182,13 @@
   let bannerCompressing = $state(false);
   let cropFile = $state<File | null>(null);
   let picUploadInput = $state<HTMLInputElement | undefined>();
+  let profileBgType = $state<'none' | 'color' | 'gradient' | 'image' | 'video'>('none');
+  let profileBgColor = $state('#1a1a2e');
+  let profileBgColor2 = $state('#6d28d9');
+  let profileBgDir = $state('135deg');
+  let profileBgUrl = $state('');
+  let profileBgUploading = $state(false);
+  let profileBgCompressing = $state(false);
   let loading = $state(true);
   let itemMsg = $state('');
   let sizeToast = $state('');
@@ -202,6 +212,20 @@
       birthday = data.birthday || '';
       website = data.website || '';
       customColor = data.custom_color || '';
+      customColor2 = data.custom_color_2 || '';
+      customColorDir = data.custom_color_dir || '135deg';
+      accentGradient = !!(data.custom_color_2);
+      profileBgType = (data.profile_bg_type as any) || 'none';
+      if (data.profile_bg) {
+        if (profileBgType === 'color') {
+          profileBgColor = data.profile_bg;
+        } else if (profileBgType === 'gradient') {
+          const m = /linear-gradient\(([^,]+),\s*(#[^\s,)]+)\s*,\s*(#[^\s,)]+)\)/.exec(data.profile_bg);
+          if (m) { profileBgDir = m[1].trim(); profileBgColor = m[2]; profileBgColor2 = m[3]; }
+        } else {
+          profileBgUrl = data.profile_bg;
+        }
+      }
       showFriends = !!data.show_friends;
       showSite = !!data.show_site;
       siteEnabled = !!data.site_enabled;
@@ -237,7 +261,10 @@
       await api.put('/api/profile', {
         display_name: displayName, bio, gender, pronouns,
         location, occupation, birthday, website, timezone,
-        custom_color: customColor, show_friends: showFriends, show_site: showSite,
+        custom_color: customColor,
+        custom_color_2: accentGradient && customColor2 ? customColor2 : null,
+        custom_color_dir: customColorDir,
+        show_friends: showFriends, show_site: showSite,
         banner_height: bannerHeight, avatar_size: avatarSize
       });
       basicMsg = '✓ Saved';
@@ -387,6 +414,88 @@
     await api.put('/api/profile/picture', { url: null });
     profilePicture = '';
   }
+
+  function showMsg(m: string) { basicMsg = '✓ ' + m; setTimeout(() => basicMsg = '', 3000); }
+
+  const BG_LIMIT = 3 * 1024 * 1024;
+
+  function computeProfileBg(): string | null {
+    if (profileBgType === 'none') return null;
+    if (profileBgType === 'color') return profileBgColor;
+    if (profileBgType === 'gradient') return `linear-gradient(${profileBgDir}, ${profileBgColor}, ${profileBgColor2})`;
+    return profileBgUrl || null;
+  }
+
+  async function saveBg() {
+    const bg = computeProfileBg();
+    try {
+      await api.put('/api/profile/background', { profile_bg: bg, profile_bg_type: profileBgType });
+      showMsg('Background saved');
+    } catch (err) {
+      itemMsg = err instanceof Error ? err.message : 'Failed to save background';
+    }
+  }
+
+  async function uploadProfileBg(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.type === 'video/mp4') {
+      if (file.size > BG_LIMIT) {
+        showSizeToast(`This video is ${(file.size / 1024 / 1024).toFixed(1)} MB (limit: 3 MB). Compress it at freeconvert.com/video-compressor`);
+        input.value = ''; return;
+      }
+    } else if (file.type === 'image/gif') {
+      if (file.size > BG_LIMIT) {
+        showSizeToast(`This GIF is ${(file.size / 1024 / 1024).toFixed(1)} MB (limit: 3 MB). Try ezgif.com`);
+        input.value = ''; return;
+      }
+    } else if (file.size > BG_LIMIT) {
+      profileBgCompressing = true;
+      const compressed = await compressImage(file, BG_LIMIT, 2560);
+      profileBgCompressing = false;
+      if (!compressed) {
+        showSizeToast(`Image too large even after compression. Try a smaller one.`);
+        input.value = ''; return;
+      }
+      profileBgUploading = true;
+      try {
+        const url = await uploadFile(compressed);
+        profileBgUrl = url;
+        profileBgType = 'image';
+        await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: 'image' });
+      } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
+      finally { profileBgUploading = false; input.value = ''; }
+      return;
+    }
+    profileBgUploading = true;
+    try {
+      const url = await uploadFile(file);
+      profileBgUrl = url;
+      profileBgType = file.type === 'video/mp4' ? 'video' : 'image';
+      await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType });
+    } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
+    finally { profileBgUploading = false; input.value = ''; }
+  }
+
+  async function removeProfileBg() {
+    profileBgUrl = '';
+    profileBgType = 'none';
+    await api.put('/api/profile/background', { profile_bg: null, profile_bg_type: 'none' });
+  }
+
+  let bgPreviewStyle = $derived((() => {
+    if (profileBgType === 'color') return `background:${profileBgColor}`;
+    if (profileBgType === 'gradient') return `background:linear-gradient(${profileBgDir},${profileBgColor},${profileBgColor2})`;
+    if ((profileBgType === 'image') && profileBgUrl) return `background-image:url(${profileBgUrl});background-size:cover;background-position:center`;
+    return 'background:var(--bg-input)';
+  })());
+
+  let accentBgPreview = $derived(
+    accentGradient && customColor && customColor2
+      ? `linear-gradient(${customColorDir}, ${customColor}, ${customColor2})`
+      : customColor || 'var(--accent)'
+  );
 
   async function uploadBanner(e: Event) {
     const input = e.target as HTMLInputElement;
@@ -721,13 +830,34 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="custom-color">Profile accent color</label>
-        <div style="display:flex;align-items:center;gap:0.75rem">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem">
           <input id="custom-color" type="color" bind:value={customColor} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
           <input type="text" bind:value={customColor} placeholder="#e07a27" style="flex:1" />
           {#if customColor}
-            <button type="button" class="btn btn-ghost btn-sm" onclick={() => customColor = ''}>Reset</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick={() => { customColor = ''; accentGradient = false; customColor2 = ''; }}>Reset</button>
           {/if}
         </div>
+        <label style="display:flex;align-items:center;gap:0.5rem;font-size:13px;cursor:pointer;margin-bottom:0.5rem">
+          <input type="checkbox" bind:checked={accentGradient} style="width:auto" />
+          Use gradient accent
+        </label>
+        {#if accentGradient}
+          <div style="display:flex;flex-direction:column;gap:0.5rem">
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              <input type="color" bind:value={customColor2} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
+              <input type="text" bind:value={customColor2} placeholder="End color e.g. #c96a1c" style="flex:1" />
+            </div>
+            <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+              {#each ['45deg','90deg','135deg','180deg','225deg','270deg'] as d}
+                <button type="button" class="btn btn-sm {customColorDir === d ? 'btn-primary' : 'btn-ghost'}"
+                  style="font-size:11px;padding:2px 8px" onclick={() => customColorDir = d}>{d}</button>
+              {/each}
+            </div>
+            {#if customColor && customColor2}
+              <div style="height:28px;border-radius:var(--radius);background:{accentBgPreview}"></div>
+            {/if}
+          </div>
+        {/if}
       </div>
       <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem">
         <input id="show-friends" type="checkbox" bind:checked={showFriends} style="width:auto" />
@@ -816,6 +946,89 @@
           <input type="file" accept="image/*,video/mp4" style="display:none" onchange={uploadBanner} disabled={bannerUploading || bannerCompressing} />
         </label>
         <span style="font-size:11px;color:var(--text-muted)">Max 3 MB · jpg, png, gif, mp4</span>
+      </div>
+    {/if}
+  </div>
+
+  <!-- ── Profile Background ── -->
+  <div class="card" style="margin-bottom:1rem">
+    <p class="section-title">Profile Background</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
+      Shown behind your entire profile page. Cards become slightly transparent to let it show through.
+    </p>
+
+    <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:1rem">
+      {#each ([['none','None','fa-ban'],['color','Color','fa-palette'],['gradient','Gradient','fa-fill-drip'],['image','Image / GIF','fa-image'],['video','Video','fa-film']] as const) as [val, label, icon]}
+        <button type="button"
+          class="btn btn-sm {profileBgType === val ? 'btn-primary' : 'btn-secondary'}"
+          style="font-size:12px"
+          onclick={() => profileBgType = val}>
+          <i class="fa-solid {icon}"></i> {label}
+        </button>
+      {/each}
+    </div>
+
+    {#if profileBgType === 'color'}
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+        <input type="color" bind:value={profileBgColor} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
+        <input type="text" bind:value={profileBgColor} placeholder="#1a1a2e" style="flex:1" />
+      </div>
+      <div style="height:40px;border-radius:var(--radius);margin-bottom:0.75rem;{bgPreviewStyle}"></div>
+      <button type="button" class="btn btn-primary btn-sm" onclick={saveBg}>Save background</button>
+
+    {:else if profileBgType === 'gradient'}
+      <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:0.75rem">
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">Start</span>
+          <input type="color" bind:value={profileBgColor} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
+          <input type="text" bind:value={profileBgColor} placeholder="#1a1a2e" style="flex:1" />
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">End&nbsp;&nbsp;</span>
+          <input type="color" bind:value={profileBgColor2} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
+          <input type="text" bind:value={profileBgColor2} placeholder="#6d28d9" style="flex:1" />
+        </div>
+        <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+          {#each ['45deg','90deg','135deg','180deg','225deg','270deg'] as d}
+            <button type="button" class="btn btn-sm {profileBgDir === d ? 'btn-primary' : 'btn-ghost'}"
+              style="font-size:11px;padding:2px 8px" onclick={() => profileBgDir = d}>{d}</button>
+          {/each}
+        </div>
+        <div style="height:40px;border-radius:var(--radius);{bgPreviewStyle}"></div>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" onclick={saveBg}>Save background</button>
+
+    {:else if profileBgType === 'image'}
+      {#if profileBgUrl}
+        <div style="height:100px;border-radius:var(--radius);background-image:url({profileBgUrl});background-size:cover;background-position:center;margin-bottom:0.75rem;position:relative">
+          <button class="upload-preview-remove" style="position:absolute;top:4px;right:4px" onclick={removeProfileBg}>×</button>
+        </div>
+      {:else}
+        <div style="height:80px;background:var(--bg-input);border:2px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;margin-bottom:0.75rem">No image set</div>
+      {/if}
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+          {profileBgUploading ? 'Uploading…' : profileBgCompressing ? 'Compressing…' : 'Upload image or GIF'}
+          <input type="file" accept="image/*" style="display:none" onchange={uploadProfileBg} disabled={profileBgUploading || profileBgCompressing} />
+        </label>
+        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB</span>
+      </div>
+
+    {:else if profileBgType === 'video'}
+      {#if profileBgUrl}
+        <div style="height:100px;border-radius:var(--radius);overflow:hidden;margin-bottom:0.75rem;position:relative">
+          <video src={profileBgUrl} autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover"></video>
+          <button class="upload-preview-remove" style="position:absolute;top:4px;right:4px" onclick={removeProfileBg}>×</button>
+        </div>
+      {:else}
+        <div style="height:80px;background:var(--bg-input);border:2px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;margin-bottom:0.75rem">No video set</div>
+      {/if}
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+          {profileBgUploading ? 'Uploading…' : 'Upload MP4'}
+          <input type="file" accept="video/mp4" style="display:none" onchange={uploadProfileBg} disabled={profileBgUploading} />
+        </label>
+        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB · compress at freeconvert.com/video-compressor</span>
       </div>
     {/if}
   </div>
