@@ -7,6 +7,8 @@
   import type { Profile } from '$lib/types';
   import { renderMarkdown } from '$lib/markdown';
 
+  const isVideo = (url?: string | null) => !!(url && url.toLowerCase().endsWith('.mp4'));
+
   let profile = $state<Profile | null>(null);
   let loading = $state(true);
   let notFound = $state(false);
@@ -220,21 +222,33 @@
 {:else}
   <div style={customStyle}>
     <!-- Banner -->
-    <div
-      class="profile-banner"
-      class:has-image={!!profile.banner}
-      style={profile.banner
-        ? `height:${bannerHeightPx}px;background-image:url(${profile.banner});background-position:${profile.banner_position || '50% 50%'}`
-        : `height:${bannerHeightPx}px`}
-    ></div>
+    {#if profile.banner && isVideo(profile.banner)}
+      <div class="profile-banner has-image" style="height:{bannerHeightPx}px;position:relative;overflow:hidden">
+        <video src={profile.banner} autoplay loop muted playsinline
+          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:{profile.banner_position || '50% 50%'}"></video>
+      </div>
+    {:else}
+      <div
+        class="profile-banner"
+        class:has-image={!!profile.banner}
+        style={profile.banner
+          ? `height:${bannerHeightPx}px;background-image:url(${profile.banner});background-position:${profile.banner_position || '50% 50%'}`
+          : `height:${bannerHeightPx}px`}
+      ></div>
+    {/if}
 
     <!-- Header: avatar row (overlaps banner) + identity row (always on page bg) -->
     <div class="container">
       <!-- Avatar centered over the banner/page boundary -->
       <div class="profile-header" style="margin-top:{-avatarSizePx / 2}px">
         {#if profile.profile_picture}
-          <img src={profile.profile_picture} alt="" class="profile-avatar"
-            style="width:{avatarSizePx}px;height:{avatarSizePx}px" />
+          {#if isVideo(profile.profile_picture)}
+            <video src={profile.profile_picture} autoplay loop muted playsinline
+              class="profile-avatar" style="width:{avatarSizePx}px;height:{avatarSizePx}px"></video>
+          {:else}
+            <img src={profile.profile_picture} alt="" class="profile-avatar"
+              style="width:{avatarSizePx}px;height:{avatarSizePx}px" />
+          {/if}
         {:else}
           <div class="profile-avatar-placeholder"
             style="width:{avatarSizePx}px;height:{avatarSizePx}px;font-size:{avatarSizePx * 0.4}px">

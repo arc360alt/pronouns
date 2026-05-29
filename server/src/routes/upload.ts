@@ -22,11 +22,14 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-    if (allowed.includes(path.extname(file.originalname).toLowerCase())) {
+    const ext  = path.extname(file.originalname).toLowerCase();
+    const mime = file.mimetype;
+    const okExts  = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4'];
+    const okMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4'];
+    if (okExts.includes(ext) && okMimes.includes(mime)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed (jpg, png, gif, webp)'));
+      cb(new Error('Only images (jpg, png, gif, webp) and MP4 videos are allowed'));
     }
   }
 });

@@ -252,11 +252,13 @@
   const PFP_LIMIT    = 1.5 * 1024 * 1024; // 1.5 MB
   const BANNER_LIMIT = 3   * 1024 * 1024; // 3 MB
 
+  const isVideo = (url?: string | null) => !!(url && url.toLowerCase().endsWith('.mp4'));
+
   // Progressively reduce JPEG quality (and optionally dimensions) until the
   // file fits within maxBytes. Returns null if it still can't fit.
-  // GIFs are never touched — canvas can't re-encode animated frames.
+  // GIFs and MP4s are never touched — canvas can't re-encode them.
   function compressImage(file: File, maxBytes: number, maxDim = 2560): Promise<File | null> {
-    if (file.type === 'image/gif') return Promise.resolve(null);
+    if (file.type === 'image/gif' || file.type === 'video/mp4') return Promise.resolve(null);
     return new Promise(resolve => {
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -325,7 +327,28 @@
       return;
     }
 
-    // Non-GIF: open crop modal (compressing first if needed)
+    // MP4: bypass crop modal, upload directly
+    if (file.type === 'video/mp4') {
+      if (file.size > PFP_LIMIT) {
+        showSizeToast(`This video is ${(file.size / 1024 / 1024).toFixed(1)} MB and exceeds the 1.5 MB limit. Compress it first at freeconvert.com/video-compressor`);
+        if (picUploadInput) picUploadInput.value = '';
+        return;
+      }
+      picUploading = true;
+      try {
+        const url = await uploadFile(file, 'pfp');
+        await api.put('/api/profile/picture', { url });
+        profilePicture = url;
+      } catch (err) {
+        itemMsg = err instanceof Error ? err.message : 'Upload failed';
+      } finally {
+        picUploading = false;
+        if (picUploadInput) picUploadInput.value = '';
+      }
+      return;
+    }
+
+    // Non-GIF, non-MP4: open crop modal (compressing first if needed)
     if (file.size <= PFP_LIMIT) { cropFile = file; return; }
 
     picCompressing = true;
@@ -374,6 +397,11 @@
     if (file.size > BANNER_LIMIT) {
       if (file.type === 'image/gif') {
         showSizeToast(`This GIF is ${(file.size / 1024 / 1024).toFixed(1)} MB and exceeds the 3 MB limit. GIFs can't be compressed in the browser — try ezgif.com to reduce the file size first.`);
+        input.value = '';
+        return;
+      }
+      if (file.type === 'video/mp4') {
+        showSizeToast(`This video is ${(file.size / 1024 / 1024).toFixed(1)} MB and exceeds the 3 MB limit. Compress it first at freeconvert.com/video-compressor`);
         input.value = '';
         return;
       }
@@ -726,39 +754,57 @@
     <p class="section-title">Profile Picture</p>
     <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
       {#if profilePicture}
-        <img src={profilePicture} alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:1px solid var(--border)" />
+        {#if isVideo(profilePicture)}
+          <video src={profilePicture} autoplay loop muted playsinline
+            style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:1px solid var(--border)"></video>
+        {:else}
+          <img src={profilePicture} alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:1px solid var(--border)" />
+        {/if}
         <button class="btn btn-danger btn-sm" onclick={removeProfilePic}>Remove</button>
       {:else}
         <div style="width:72px;height:72px;border-radius:50%;background:var(--bg-input);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-muted)"><i class="fa-solid fa-user"></i></div>
       {/if}
       <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-        {picUploading ? 'Uploading…' : picCompressing ? 'Compressing…' : 'Upload image'}
-        <input bind:this={picUploadInput} type="file" accept="image/*" style="display:none" onchange={openPicPicker} disabled={picUploading || picCompressing} />
+        {picUploading ? 'Uploading…' : picCompressing ? 'Compressing…' : 'Upload image or video'}
+        <input bind:this={picUploadInput} type="file" accept="image/*,video/mp4" style="display:none" onchange={openPicPicker} disabled={picUploading || picCompressing} />
       </label>
-      <span style="font-size:11px;color:var(--text-muted)">Max 1.5 MB</span>
+      <span style="font-size:11px;color:var(--text-muted)">Max 1.5 MB · jpg, png, gif, mp4</span>
     </div>
 
     <hr />
     <p class="section-title">Banner</p>
     {#if banner}
       <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-      <div
-        class="banner-editor"
-        style="height:{bannerHeight}px;background-image:url({banner});background-position:{bannerPosition};margin-bottom:0.5rem"
-        onclick={handleFocalClick}
-      >
-        <div class="focal-indicator" style="left:{focalX}%;top:{focalY}%"></div>
-        <div style="position:absolute;bottom:8px;left:8px;font-size:11px;background:rgba(0,0,0,0.65);color:#fff;padding:3px 7px;border-radius:3px;pointer-events:none">
-          Click to set focal point — this part stays visible when cropped
+      {#if isVideo(banner)}
+        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+        <div class="banner-editor" style="height:{bannerHeight}px;margin-bottom:0.5rem" onclick={handleFocalClick}>
+          <video src={banner} autoplay loop muted playsinline
+            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:{bannerPosition};pointer-events:none"></video>
+          <div class="focal-indicator" style="left:{focalX}%;top:{focalY}%"></div>
+          <div style="position:absolute;bottom:8px;left:8px;font-size:11px;background:rgba(0,0,0,0.65);color:#fff;padding:3px 7px;border-radius:3px;pointer-events:none">
+            Click to set focal point — this part stays visible when cropped
+          </div>
         </div>
-      </div>
+      {:else}
+        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+        <div
+          class="banner-editor"
+          style="height:{bannerHeight}px;background-image:url({banner});background-position:{bannerPosition};margin-bottom:0.5rem"
+          onclick={handleFocalClick}
+        >
+          <div class="focal-indicator" style="left:{focalX}%;top:{focalY}%"></div>
+          <div style="position:absolute;bottom:8px;left:8px;font-size:11px;background:rgba(0,0,0,0.65);color:#fff;padding:3px 7px;border-radius:3px;pointer-events:none">
+            Click to set focal point — this part stays visible when cropped
+          </div>
+        </div>
+      {/if}
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.25rem;align-items:center">
         <button class="btn btn-danger btn-sm" onclick={removeBanner}>Remove banner</button>
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-          {bannerUploading ? 'Uploading…' : bannerCompressing ? 'Compressing…' : 'Replace image'}
-          <input type="file" accept="image/*" style="display:none" onchange={uploadBanner} disabled={bannerUploading || bannerCompressing} />
+          {bannerUploading ? 'Uploading…' : bannerCompressing ? 'Compressing…' : 'Replace'}
+          <input type="file" accept="image/*,video/mp4" style="display:none" onchange={uploadBanner} disabled={bannerUploading || bannerCompressing} />
         </label>
-        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB</span>
+        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB · jpg, png, gif, mp4</span>
       </div>
     {:else}
       <div style="height:160px;background:var(--bg-input);border:2px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;margin-bottom:0.75rem">
@@ -767,9 +813,9 @@
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
           {bannerUploading ? 'Uploading…' : bannerCompressing ? 'Compressing…' : 'Upload banner'}
-          <input type="file" accept="image/*" style="display:none" onchange={uploadBanner} disabled={bannerUploading || bannerCompressing} />
+          <input type="file" accept="image/*,video/mp4" style="display:none" onchange={uploadBanner} disabled={bannerUploading || bannerCompressing} />
         </label>
-        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB</span>
+        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB · jpg, png, gif, mp4</span>
       </div>
     {/if}
   </div>
