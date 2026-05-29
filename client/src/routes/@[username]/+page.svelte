@@ -20,6 +20,30 @@
   let lightboxSrc = $state<string | null>(null);
   let lightboxCaption = $state<string | null>(null);
 
+  let linkWarningOpen = $state(false);
+  let pendingLink = $state('');
+
+  function interceptBioLink(e: MouseEvent) {
+    const a = (e.target as HTMLElement).closest('a');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href || href === '#') return;
+    e.preventDefault();
+    pendingLink = href;
+    linkWarningOpen = true;
+  }
+
+  function linkDomain(url: string): string {
+    try { return new URL(url).hostname; }
+    catch { return url; }
+  }
+
+  function openPendingLink() {
+    window.open(pendingLink, '_blank', 'noopener,noreferrer');
+    linkWarningOpen = false;
+    pendingLink = '';
+  }
+
   // Section ordering & drag state
   const DEFAULT_SECTIONS = ['names', 'bio', 'flags', 'images', 'links', 'clock', 'friends'];
   let sectionOrder = $state<string[]>([]);
@@ -289,7 +313,8 @@
               </div>
 
             {:else if sid === 'bio'}
-              <div class="profile-bio bio-content">{@html renderMarkdown(profile.bio ?? '')}</div>
+              <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+              <div class="profile-bio bio-content" onclick={interceptBioLink}>{@html renderMarkdown(profile.bio ?? '')}</div>
 
             {:else if sid === 'flags'}
               <p class="section-title">Flags</p>
@@ -417,6 +442,38 @@
     {/snippet}
   </Modal>
 {/if}
+
+<!-- Link warning modal -->
+<Modal open={linkWarningOpen} title="External Link" onClose={() => { linkWarningOpen = false; pendingLink = ''; }}>
+  {#snippet children()}
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <div style="display:flex;align-items:flex-start;gap:0.75rem">
+        <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:rgba(217,85,85,0.15);display:flex;align-items:center;justify-content:center">
+          <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);font-size:15px"></i>
+        </div>
+        <div>
+          <p style="font-weight:600;margin-bottom:0.25rem">This link may be dangerous</p>
+          <p style="font-size:13px;color:var(--text-muted);line-height:1.5">
+            Links in user bios are not reviewed by us. Only open links from people you trust.
+          </p>
+        </div>
+      </div>
+
+      <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:0.65rem 0.75rem">
+        <p style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.3rem">Destination</p>
+        <p style="font-weight:600;font-size:14px;color:var(--text);word-break:break-all;margin-bottom:0.2rem">{linkDomain(pendingLink)}</p>
+        <p style="font-size:11px;color:var(--text-muted);word-break:break-all;font-family:monospace">{pendingLink}</p>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick={() => { linkWarningOpen = false; pendingLink = ''; }}>Cancel</button>
+        <button class="btn btn-primary" onclick={openPendingLink}>
+          Open <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:11px"></i>
+        </button>
+      </div>
+    </div>
+  {/snippet}
+</Modal>
 
 <!-- Lightbox -->
 {#if lightboxSrc}
