@@ -254,7 +254,9 @@
 
   // Progressively reduce JPEG quality (and optionally dimensions) until the
   // file fits within maxBytes. Returns null if it still can't fit.
+  // GIFs are never touched — canvas can't re-encode animated frames.
   function compressImage(file: File, maxBytes: number, maxDim = 2560): Promise<File | null> {
+    if (file.type === 'image/gif') return Promise.resolve(null);
     return new Promise(resolve => {
       const url = URL.createObjectURL(file);
       const img = new Image();
@@ -299,6 +301,31 @@
   async function openPicPicker(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    const isGif = file.type === 'image/gif';
+
+    if (isGif) {
+      // GIFs bypass the crop modal — canvas.toBlob() would strip animation.
+      // Upload directly if within limit; otherwise we can't compress in-browser.
+      if (file.size > PFP_LIMIT) {
+        showSizeToast(`This GIF is ${(file.size / 1024 / 1024).toFixed(1)} MB and exceeds the 1.5 MB limit. GIFs can't be compressed in the browser — try ezgif.com to reduce the file size first.`);
+        if (picUploadInput) picUploadInput.value = '';
+        return;
+      }
+      picUploading = true;
+      try {
+        const url = await uploadFile(file, 'pfp');
+        await api.put('/api/profile/picture', { url });
+        profilePicture = url;
+      } catch (err) {
+        itemMsg = err instanceof Error ? err.message : 'Upload failed';
+      } finally {
+        picUploading = false;
+        if (picUploadInput) picUploadInput.value = '';
+      }
+      return;
+    }
+
+    // Non-GIF: open crop modal (compressing first if needed)
     if (file.size <= PFP_LIMIT) { cropFile = file; return; }
 
     picCompressing = true;
@@ -345,6 +372,11 @@
 
     let toUpload: File = file;
     if (file.size > BANNER_LIMIT) {
+      if (file.type === 'image/gif') {
+        showSizeToast(`This GIF is ${(file.size / 1024 / 1024).toFixed(1)} MB and exceeds the 3 MB limit. GIFs can't be compressed in the browser — try ezgif.com to reduce the file size first.`);
+        input.value = '';
+        return;
+      }
       bannerCompressing = true;
       const compressed = await compressImage(file, BANNER_LIMIT, 2560);
       bannerCompressing = false;
