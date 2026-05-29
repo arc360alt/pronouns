@@ -4,6 +4,8 @@
   import { user, waitForUser } from '$lib/stores';
   import { api } from '$lib/api';
   import type { Profile, ProfileName, ProfileFlag, ProfileImage, Friend, ProfileLink, CustomField, CustomFieldEntry, Badge } from '$lib/types';
+  import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
+  import ImageCropModal from '$lib/components/ImageCropModal.svelte';
 
   // Basic profile fields
   let displayName = $state('');
@@ -173,6 +175,8 @@
   let basicMsg = $state('');
   let picUploading = $state(false);
   let bannerUploading = $state(false);
+  let cropFile = $state<File | null>(null);
+  let picUploadInput = $state<HTMLInputElement | undefined>();
   let loading = $state(true);
   let itemMsg = $state('');
 
@@ -236,23 +240,46 @@
     }
   }
 
-  async function uploadFile(file: File): Promise<string> {
+  const PFP_LIMIT    = 1.5 * 1024 * 1024; // 1.5 MB
+  const BANNER_LIMIT = 3   * 1024 * 1024; // 3 MB
+
+  async function uploadFile(file: File | Blob, type?: string): Promise<string> {
     const fd = new FormData();
-    fd.append('file', file);
-    const res = await api.upload('/api/upload', fd);
+    fd.append('file', file instanceof File ? file : new File([file], 'upload.jpg', { type: 'image/jpeg' }));
+    const url = type ? `/api/upload?type=${type}` : '/api/upload';
+    const res = await api.upload(url, fd);
     return res.url;
   }
 
-  async function uploadProfilePic(e: Event) {
+  function openPicPicker(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    if (file.size > PFP_LIMIT) {
+      itemMsg = `Profile picture must be under 1.5 MB (yours is ${(file.size / 1024 / 1024).toFixed(1)} MB). Compress or resize it first.`;
+      if (picUploadInput) picUploadInput.value = '';
+      return;
+    }
+    cropFile = file;
+  }
+
+  async function onCropConfirm(blob: Blob) {
+    cropFile = null;
+    if (picUploadInput) picUploadInput.value = '';
     picUploading = true;
     try {
-      const url = await uploadFile(file);
+      const url = await uploadFile(blob, 'pfp');
       await api.put('/api/profile/picture', { url });
       profilePicture = url;
-    } catch { /* ignore */ }
-    finally { picUploading = false; }
+    } catch (err) {
+      itemMsg = err instanceof Error ? err.message : 'Upload failed';
+    } finally {
+      picUploading = false;
+    }
+  }
+
+  function onCropCancel() {
+    cropFile = null;
+    if (picUploadInput) picUploadInput.value = '';
   }
 
   async function removeProfilePic() {
@@ -263,15 +290,22 @@
   async function uploadBanner(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    if (file.size > BANNER_LIMIT) {
+      itemMsg = `Banner must be under 3 MB (yours is ${(file.size / 1024 / 1024).toFixed(1)} MB). Compress or resize it first.`;
+      (e.target as HTMLInputElement).value = '';
+      return;
+    }
     bannerUploading = true;
     try {
-      const url = await uploadFile(file);
-      // Reset to center on new upload
+      const url = await uploadFile(file, 'banner');
       focalX = 50; focalY = 50; bannerPosition = '50% 50%';
       await api.put('/api/profile/banner', { url, position: bannerPosition });
       banner = url;
-    } catch { /* ignore */ }
-    finally { bannerUploading = false; }
+    } catch (err) {
+      itemMsg = err instanceof Error ? err.message : 'Upload failed';
+    } finally {
+      bannerUploading = false;
+    }
   }
 
   async function removeBanner() {
@@ -562,7 +596,7 @@
 
       <div class="form-group">
         <label class="form-label" for="bio">Bio</label>
-        <textarea id="bio" bind:value={bio} placeholder="Tell people about yourself…" rows="4"></textarea>
+        <MarkdownEditor id="bio" bind:value={bio} rows={5} placeholder="Tell people about yourself… (supports **bold**, *italic*, # headings, - lists, [links](url), and more)" />
       </div>
       <div class="form-group">
         <label class="form-label" for="custom-color">Profile accent color</label>
@@ -606,8 +640,9 @@
       {/if}
       <label class="btn btn-secondary btn-sm" style="cursor:pointer">
         {picUploading ? 'Uploading…' : 'Upload image'}
-        <input type="file" accept="image/*" style="display:none" onchange={uploadProfilePic} disabled={picUploading} />
+        <input bind:this={picUploadInput} type="file" accept="image/*" style="display:none" onchange={openPicPicker} disabled={picUploading} />
       </label>
+      <span style="font-size:11px;color:var(--text-muted)">Max 1.5 MB</span>
     </div>
 
     <hr />
@@ -624,21 +659,25 @@
           Click to set focal point — this part stays visible when cropped
         </div>
       </div>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.25rem">
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.25rem;align-items:center">
         <button class="btn btn-danger btn-sm" onclick={removeBanner}>Remove banner</button>
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
           {bannerUploading ? 'Uploading…' : 'Replace image'}
           <input type="file" accept="image/*" style="display:none" onchange={uploadBanner} disabled={bannerUploading} />
         </label>
+        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB</span>
       </div>
     {:else}
       <div style="height:160px;background:var(--bg-input);border:2px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;margin-bottom:0.75rem">
         No banner set
       </div>
-      <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-        {bannerUploading ? 'Uploading…' : 'Upload banner'}
-        <input type="file" accept="image/*" style="display:none" onchange={uploadBanner} disabled={bannerUploading} />
-      </label>
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+          {bannerUploading ? 'Uploading…' : 'Upload banner'}
+          <input type="file" accept="image/*" style="display:none" onchange={uploadBanner} disabled={bannerUploading} />
+        </label>
+        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB</span>
+      </div>
     {/if}
   </div>
 
@@ -961,4 +1000,12 @@
     </div>
   </div>
 </div>
+{/if}
+
+{#if cropFile}
+  <ImageCropModal
+    file={cropFile}
+    onConfirm={onCropConfirm}
+    onCancel={onCropCancel}
+  />
 {/if}

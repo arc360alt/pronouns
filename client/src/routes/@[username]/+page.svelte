@@ -5,6 +5,7 @@
   import { api } from '$lib/api';
   import Modal from '$lib/components/Modal.svelte';
   import type { Profile } from '$lib/types';
+  import { renderMarkdown } from '$lib/markdown';
 
   let profile = $state<Profile | null>(null);
   let loading = $state(true);
@@ -288,7 +289,7 @@
               </div>
 
             {:else if sid === 'bio'}
-              <p class="profile-bio">{profile.bio}</p>
+              <div class="profile-bio bio-content">{@html renderMarkdown(profile.bio ?? '')}</div>
 
             {:else if sid === 'flags'}
               <p class="section-title">Flags</p>

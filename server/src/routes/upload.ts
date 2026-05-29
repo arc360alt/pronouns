@@ -31,8 +31,22 @@ const upload = multer({
   }
 });
 
+const TYPE_LIMITS: Record<string, number> = {
+  pfp:    2   * 1024 * 1024,  // 2 MB (cropped output is always tiny; generous headroom)
+  banner: 3   * 1024 * 1024,  // 3 MB
+};
+
 router.post('/', requireAuth, upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+  const type = (req.query.type as string) ?? '';
+  const limit = TYPE_LIMITS[type];
+  if (limit && req.file.size > limit) {
+    fs.unlinkSync(req.file.path);
+    const mb = (limit / 1024 / 1024).toFixed(1);
+    return res.status(413).json({ error: `File too large. Maximum size for ${type} uploads is ${mb} MB.` });
+  }
+
   return res.json({ url: `/uploads/${req.file.filename}` });
 });
 
