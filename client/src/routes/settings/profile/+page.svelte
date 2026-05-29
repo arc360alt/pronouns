@@ -174,11 +174,20 @@
   let basicSaving = $state(false);
   let basicMsg = $state('');
   let picUploading = $state(false);
+  let picCompressing = $state(false);
   let bannerUploading = $state(false);
+  let bannerCompressing = $state(false);
   let cropFile = $state<File | null>(null);
   let picUploadInput = $state<HTMLInputElement | undefined>();
   let loading = $state(true);
   let itemMsg = $state('');
+  let sizeToast = $state('');
+  let _sizeToastTimer: ReturnType<typeof setTimeout> | null = null;
+  function showSizeToast(msg: string) {
+    sizeToast = msg;
+    if (_sizeToastTimer) clearTimeout(_sizeToastTimer);
+    _sizeToastTimer = setTimeout(() => { sizeToast = ''; }, 7000);
+  }
 
   onMount(async () => {
     if (!await waitForUser()) { goto('/login'); return; }
@@ -243,6 +252,42 @@
   const PFP_LIMIT    = 1.5 * 1024 * 1024; // 1.5 MB
   const BANNER_LIMIT = 3   * 1024 * 1024; // 3 MB
 
+  // Progressively reduce JPEG quality (and optionally dimensions) until the
+  // file fits within maxBytes. Returns null if it still can't fit.
+  function compressImage(file: File, maxBytes: number, maxDim = 2560): Promise<File | null> {
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > maxDim || h > maxDim) {
+          const r = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * r); h = Math.round(h * r);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        const outName = file.name.replace(/\.[^.]+$/, '.jpg');
+        const qualities = [0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25];
+        function tryNext(i: number) {
+          if (i >= qualities.length) { resolve(null); return; }
+          canvas.toBlob(blob => {
+            if (!blob) { resolve(null); return; }
+            if (blob.size <= maxBytes) {
+              resolve(new File([blob], outName, { type: 'image/jpeg' }));
+            } else {
+              tryNext(i + 1);
+            }
+          }, 'image/jpeg', qualities[i]);
+        }
+        tryNext(0);
+      };
+      img.src = url;
+    });
+  }
+
   async function uploadFile(file: File | Blob, type?: string): Promise<string> {
     const fd = new FormData();
     fd.append('file', file instanceof File ? file : new File([file], 'upload.jpg', { type: 'image/jpeg' }));
@@ -251,15 +296,21 @@
     return res.url;
   }
 
-  function openPicPicker(e: Event) {
+  async function openPicPicker(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    if (file.size > PFP_LIMIT) {
-      itemMsg = `Profile picture must be under 1.5 MB (yours is ${(file.size / 1024 / 1024).toFixed(1)} MB). Compress or resize it first.`;
+    if (file.size <= PFP_LIMIT) { cropFile = file; return; }
+
+    picCompressing = true;
+    const compressed = await compressImage(file, PFP_LIMIT, 1024);
+    picCompressing = false;
+
+    if (!compressed) {
+      showSizeToast(`Image is too large even after compression (${(file.size / 1024 / 1024).toFixed(1)} MB → still over 1.5 MB). Try a smaller image.`);
       if (picUploadInput) picUploadInput.value = '';
       return;
     }
-    cropFile = file;
+    cropFile = compressed;
   }
 
   async function onCropConfirm(blob: Blob) {
@@ -288,16 +339,26 @@
   }
 
   async function uploadBanner(e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0];
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
+
+    let toUpload: File = file;
     if (file.size > BANNER_LIMIT) {
-      itemMsg = `Banner must be under 3 MB (yours is ${(file.size / 1024 / 1024).toFixed(1)} MB). Compress or resize it first.`;
-      (e.target as HTMLInputElement).value = '';
-      return;
+      bannerCompressing = true;
+      const compressed = await compressImage(file, BANNER_LIMIT, 2560);
+      bannerCompressing = false;
+      if (!compressed) {
+        showSizeToast(`Banner is too large even after compression (${(file.size / 1024 / 1024).toFixed(1)} MB → still over 3 MB). Try a smaller image.`);
+        input.value = '';
+        return;
+      }
+      toUpload = compressed;
     }
+
     bannerUploading = true;
     try {
-      const url = await uploadFile(file, 'banner');
+      const url = await uploadFile(toUpload, 'banner');
       focalX = 50; focalY = 50; bannerPosition = '50% 50%';
       await api.put('/api/profile/banner', { url, position: bannerPosition });
       banner = url;
@@ -639,8 +700,8 @@
         <div style="width:72px;height:72px;border-radius:50%;background:var(--bg-input);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-muted)"><i class="fa-solid fa-user"></i></div>
       {/if}
       <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-        {picUploading ? 'Uploading…' : 'Upload image'}
-        <input bind:this={picUploadInput} type="file" accept="image/*" style="display:none" onchange={openPicPicker} disabled={picUploading} />
+        {picUploading ? 'Uploading…' : picCompressing ? 'Compressing…' : 'Upload image'}
+        <input bind:this={picUploadInput} type="file" accept="image/*" style="display:none" onchange={openPicPicker} disabled={picUploading || picCompressing} />
       </label>
       <span style="font-size:11px;color:var(--text-muted)">Max 1.5 MB</span>
     </div>
@@ -662,8 +723,8 @@
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.25rem;align-items:center">
         <button class="btn btn-danger btn-sm" onclick={removeBanner}>Remove banner</button>
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-          {bannerUploading ? 'Uploading…' : 'Replace image'}
-          <input type="file" accept="image/*" style="display:none" onchange={uploadBanner} disabled={bannerUploading} />
+          {bannerUploading ? 'Uploading…' : bannerCompressing ? 'Compressing…' : 'Replace image'}
+          <input type="file" accept="image/*" style="display:none" onchange={uploadBanner} disabled={bannerUploading || bannerCompressing} />
         </label>
         <span style="font-size:11px;color:var(--text-muted)">Max 3 MB</span>
       </div>
@@ -673,8 +734,8 @@
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-          {bannerUploading ? 'Uploading…' : 'Upload banner'}
-          <input type="file" accept="image/*" style="display:none" onchange={uploadBanner} disabled={bannerUploading} />
+          {bannerUploading ? 'Uploading…' : bannerCompressing ? 'Compressing…' : 'Upload banner'}
+          <input type="file" accept="image/*" style="display:none" onchange={uploadBanner} disabled={bannerUploading || bannerCompressing} />
         </label>
         <span style="font-size:11px;color:var(--text-muted)">Max 3 MB</span>
       </div>
@@ -1009,3 +1070,50 @@
     onCancel={onCropCancel}
   />
 {/if}
+
+{#if sizeToast}
+  <div class="size-toast">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span style="flex:1">{sizeToast}</span>
+    <button class="size-toast-close" onclick={() => { sizeToast = ''; }} aria-label="Dismiss">×</button>
+  </div>
+{/if}
+
+<style>
+  .size-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--danger);
+    color: #fff;
+    padding: 0.75rem 0.85rem 0.75rem 1rem;
+    border-radius: var(--radius);
+    font-size: 13px;
+    max-width: 440px;
+    width: calc(100% - 2rem);
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    animation: toast-slide-up 0.18s ease;
+    line-height: 1.45;
+  }
+  @keyframes toast-slide-up {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .size-toast-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.8;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .size-toast-close:hover { opacity: 1; }
+</style>
