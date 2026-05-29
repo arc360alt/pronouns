@@ -173,6 +173,31 @@
   // Field rename inputs (keyed by field id)
   let fieldNameEdits = $state<Record<number, string>>({});
 
+  // Storage quota
+  let storageUsed = $state<number | null>(null);
+  const storageLimitBytes = 50 * 1024 * 1024;
+
+  function formatBytes(b: number): string {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  async function loadStorageUsage() {
+    try {
+      const d = await api.get<{ used: number }>('/api/upload/usage');
+      storageUsed = d.used;
+    } catch { /* ignore */ }
+  }
+
+  function checkStorage(): boolean {
+    if (storageUsed !== null && storageUsed >= storageLimitBytes) {
+      showSizeToast('Storage limit reached (50 MB). Delete some uploaded files to free up space.');
+      return false;
+    }
+    return true;
+  }
+
   // Status
   let basicSaving = $state(false);
   let basicMsg = $state('');
@@ -201,6 +226,7 @@
 
   onMount(async () => {
     if (!await waitForUser()) { goto('/login'); return; }
+    loadStorageUsage();
     try {
       const data = await api.get<Profile>('/api/profile');
       displayName = data.display_name || '';
@@ -330,6 +356,7 @@
   async function openPicPicker(e: Event) {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
+    if (!checkStorage()) { if (picUploadInput) picUploadInput.value = ''; return; }
     const isGif = file.type === 'image/gif';
 
     if (isGif) {
@@ -345,6 +372,7 @@
         const url = await uploadFile(file, 'pfp');
         await api.put('/api/profile/picture', { url });
         profilePicture = url;
+        loadStorageUsage();
       } catch (err) {
         itemMsg = err instanceof Error ? err.message : 'Upload failed';
       } finally {
@@ -366,6 +394,7 @@
         const url = await uploadFile(file, 'pfp');
         await api.put('/api/profile/picture', { url });
         profilePicture = url;
+        loadStorageUsage();
       } catch (err) {
         itemMsg = err instanceof Error ? err.message : 'Upload failed';
       } finally {
@@ -393,11 +422,13 @@
   async function onCropConfirm(blob: Blob) {
     cropFile = null;
     if (picUploadInput) picUploadInput.value = '';
+    if (!checkStorage()) return;
     picUploading = true;
     try {
       const url = await uploadFile(blob, 'pfp');
       await api.put('/api/profile/picture', { url });
       profilePicture = url;
+      loadStorageUsage();
     } catch (err) {
       itemMsg = err instanceof Error ? err.message : 'Upload failed';
     } finally {
@@ -440,6 +471,7 @@
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    if (!checkStorage()) { input.value = ''; return; }
     if (file.type === 'video/mp4') {
       if (file.size > BG_LIMIT) {
         showSizeToast(`This video is ${(file.size / 1024 / 1024).toFixed(1)} MB (limit: 3 MB). Compress it at freeconvert.com/video-compressor`);
@@ -474,6 +506,7 @@
       profileBgUrl = url;
       profileBgType = file.type === 'video/mp4' ? 'video' : 'image';
       await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType });
+      loadStorageUsage();
     } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
     finally { profileBgUploading = false; input.value = ''; }
   }
@@ -501,6 +534,7 @@
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
+    if (!checkStorage()) { input.value = ''; return; }
 
     let toUpload: File = file;
     if (file.size > BANNER_LIMIT) {
@@ -531,6 +565,7 @@
       focalX = 50; focalY = 50; bannerPosition = '50% 50%';
       await api.put('/api/profile/banner', { url, position: bannerPosition });
       banner = url;
+      loadStorageUsage();
     } catch (err) {
       itemMsg = err instanceof Error ? err.message : 'Upload failed';
     } finally {
@@ -584,6 +619,7 @@
 
   async function addFlag() {
     if (!newFlagName.trim() || !newFlagFile) return;
+    if (!checkStorage()) return;
     try {
       const url = await uploadFile(newFlagFile);
       const f = await api.post<ProfileFlag>('/api/profile/flags', { flag_name: newFlagName.trim(), flag_image: url });
@@ -591,6 +627,7 @@
       newFlagName = '';
       newFlagFile = null;
       newFlagPreview = '';
+      loadStorageUsage();
     } catch (err) {
       itemMsg = err instanceof Error ? err.message : 'Failed';
     }
@@ -610,6 +647,7 @@
 
   async function addImage() {
     if (!newImageFile) return;
+    if (!checkStorage()) return;
     try {
       const url = await uploadFile(newImageFile);
       const img = await api.post<ProfileImage>('/api/profile/images', { image_url: url, caption: newImageCaption || null });
@@ -617,6 +655,7 @@
       newImageCaption = '';
       newImageFile = null;
       newImagePreview = '';
+      loadStorageUsage();
     } catch (err) {
       itemMsg = err instanceof Error ? err.message : 'Failed';
     }
@@ -881,6 +920,23 @@
 
   <!-- ── Appearance ── -->
   <div class="card" style="margin-bottom:1rem">
+    <!-- Storage quota bar -->
+    {#if storageUsed !== null}
+      <div style="margin-bottom:1.25rem;padding:0.75rem;background:var(--bg-input);border-radius:var(--radius);border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">
+          <span style="font-size:13px;color:var(--text-muted)"><i class="fa-solid fa-hard-drive"></i> Upload storage</span>
+          <span style="font-size:13px;font-weight:600;color:{storageUsed >= storageLimitBytes ? 'var(--danger)' : 'var(--text)'}">
+            {formatBytes(storageUsed)} <span style="font-weight:400;color:var(--text-muted)">/ 50 MB</span>
+          </span>
+        </div>
+        <div style="height:7px;background:var(--border);border-radius:999px;overflow:hidden">
+          <div style="height:100%;width:{Math.min(100, storageUsed / storageLimitBytes * 100).toFixed(1)}%;background:{storageUsed >= storageLimitBytes ? 'var(--danger)' : storageUsed / storageLimitBytes > 0.8 ? 'var(--accent)' : 'var(--success)'};border-radius:999px;transition:width 0.3s"></div>
+        </div>
+        {#if storageUsed >= storageLimitBytes}
+          <p style="font-size:12px;color:var(--danger);margin-top:0.4rem">Limit reached — delete some uploaded files to free space.</p>
+        {/if}
+      </div>
+    {/if}
     <p class="section-title">Profile Picture</p>
     <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
       {#if profilePicture}
