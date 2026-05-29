@@ -207,12 +207,19 @@
   let bannerCompressing = $state(false);
   let cropFile = $state<File | null>(null);
   let picUploadInput = $state<HTMLInputElement | undefined>();
-  let profileBgType = $state<'none' | 'color' | 'gradient' | 'image' | 'video'>('none');
+  let profileBgType = $state<'none' | 'color' | 'gradient' | 'image' | 'video' | 'youtube'>('none');
   let profileBgColor = $state('#1a1a2e');
   let profileBgColor2 = $state('#6d28d9');
   let profileBgDir = $state('135deg');
   let profileBgUrl = $state('');
+  let profileBgBrightness = $state(0.5);
   let profileBgUploading = $state(false);
+
+  function extractYouTubeId(url: string): string | null {
+    if (!url) return null;
+    const m = /(?:v=|youtu\.be\/|embed\/|shorts\/)([a-zA-Z0-9_-]{11})/.exec(url);
+    return m ? m[1] : null;
+  }
   let profileBgCompressing = $state(false);
   let loading = $state(true);
   let itemMsg = $state('');
@@ -242,6 +249,7 @@
       customColorDir = data.custom_color_dir || '135deg';
       accentGradient = !!(data.custom_color_2);
       profileBgType = (data.profile_bg_type as any) || 'none';
+      profileBgBrightness = data.profile_bg_brightness ?? 0.5;
       if (data.profile_bg) {
         if (profileBgType === 'color') {
           profileBgColor = data.profile_bg;
@@ -460,7 +468,11 @@
   async function saveBg() {
     const bg = computeProfileBg();
     try {
-      await api.put('/api/profile/background', { profile_bg: bg, profile_bg_type: profileBgType });
+      await api.put('/api/profile/background', {
+        profile_bg: bg,
+        profile_bg_type: profileBgType,
+        profile_bg_brightness: profileBgBrightness,
+      });
       showMsg('Background saved');
     } catch (err) {
       itemMsg = err instanceof Error ? err.message : 'Failed to save background';
@@ -495,7 +507,7 @@
         const url = await uploadFile(compressed);
         profileBgUrl = url;
         profileBgType = 'image';
-        await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: 'image' });
+        await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: 'image', profile_bg_brightness: profileBgBrightness });
       } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
       finally { profileBgUploading = false; input.value = ''; }
       return;
@@ -505,7 +517,7 @@
       const url = await uploadFile(file);
       profileBgUrl = url;
       profileBgType = file.type === 'video/mp4' ? 'video' : 'image';
-      await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType });
+      await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType, profile_bg_brightness: profileBgBrightness });
       loadStorageUsage();
     } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
     finally { profileBgUploading = false; input.value = ''; }
@@ -1014,12 +1026,12 @@
     </p>
 
     <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:1rem">
-      {#each ([['none','None','fa-ban'],['color','Color','fa-palette'],['gradient','Gradient','fa-fill-drip'],['image','Image / GIF','fa-image'],['video','Video','fa-film']] as const) as [val, label, icon]}
+      {#each ([['none','None','fa-ban'],['color','Color','fa-palette'],['gradient','Gradient','fa-fill-drip'],['image','Image / GIF','fa-image'],['video','Video','fa-film'],['youtube','YouTube','fa-brands fa-youtube']] as const) as [val, label, icon]}
         <button type="button"
           class="btn btn-sm {profileBgType === val ? 'btn-primary' : 'btn-secondary'}"
           style="font-size:12px"
           onclick={() => profileBgType = val}>
-          <i class="fa-solid {icon}"></i> {label}
+          <i class="{icon.startsWith('fa-brands') ? icon : 'fa-solid ' + icon}"></i> {label}
         </button>
       {/each}
     </div>
@@ -1085,6 +1097,38 @@
           <input type="file" accept="video/mp4" style="display:none" onchange={uploadProfileBg} disabled={profileBgUploading} />
         </label>
         <span style="font-size:11px;color:var(--text-muted)">Max 3 MB · compress at freeconvert.com/video-compressor</span>
+      </div>
+
+    {:else if profileBgType === 'youtube'}
+      <div class="form-group" style="margin-bottom:0.75rem">
+        <label class="form-label" for="bg-yt-url">YouTube video URL</label>
+        <input id="bg-yt-url" type="url" bind:value={profileBgUrl} placeholder="https://www.youtube.com/watch?v=..." />
+        {#if profileBgUrl && !extractYouTubeId(profileBgUrl)}
+          <p style="font-size:12px;color:var(--danger);margin-top:0.25rem">Couldn't find a video ID — paste a youtube.com or youtu.be link.</p>
+        {/if}
+        {#if extractYouTubeId(profileBgUrl)}
+          <p style="font-size:12px;color:var(--success);margin-top:0.25rem"><i class="fa-solid fa-check"></i> Video ID found: {extractYouTubeId(profileBgUrl)}</p>
+        {/if}
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem">
+        <i class="fa-solid fa-circle-info"></i> The video will autoplay muted. Some videos may not be embeddable — try a different one if it doesn't show.
+      </p>
+      <button type="button" class="btn btn-primary btn-sm" onclick={saveBg}
+        disabled={!extractYouTubeId(profileBgUrl)}>Save background</button>
+    {/if}
+
+    <!-- Brightness slider — shown for all non-none types -->
+    {#if profileBgType !== 'none'}
+      <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+        <label class="form-label" style="display:flex;justify-content:space-between">
+          <span>Background brightness</span>
+          <strong>{Math.round(profileBgBrightness * 100)}%</strong>
+        </label>
+        <input type="range" min="0" max="1" step="0.05" bind:value={profileBgBrightness}
+          style="width:100%;accent-color:var(--accent);margin-top:0.35rem" />
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
+          <span>0% (dark)</span><span>50% (default)</span><span>100% (full)</span>
+        </div>
       </div>
     {/if}
   </div>

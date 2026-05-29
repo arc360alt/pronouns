@@ -90,6 +90,7 @@ export interface Profile {
   custom_color_dir: string;
   profile_bg: string | null;
   profile_bg_type: string;
+  profile_bg_brightness: number;
   show_friends: boolean | number;
   show_site: boolean | number;
   site_enabled: boolean | number;

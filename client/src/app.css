@@ -462,28 +462,63 @@ button.pref-btn:hover { opacity: 1; background: none; }
 .modal-body { padding: 1.25rem; }
 .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
 
-/* Profile background effect — cards become glass when a bg is set */
-.has-profile-bg .card,
-.has-profile-bg .profile-section {
-  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-.profile-bg-fixed {
+/* Profile background system */
+.profile-bg-root {
   position: fixed;
   inset: 0;
   z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.profile-bg-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
-.profile-bg-video {
-  position: fixed;
+.profile-bg-youtube-iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw;   /* 16:9 — taller than wide viewports */
+  min-height: 100vh;
+  min-width: 177.78vh; /* 16:9 — wider than tall viewports */
+  transform: translate(-50%, -50%);
+  border: none;
+}
+.profile-bg-overlay {
+  position: absolute;
   inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  background: #000;
+}
+
+/* Cards become semi-transparent when a profile bg is set.
+   No backdrop-filter — it creates stacking contexts that break fixed bg layers. */
+.has-profile-bg .card,
+.has-profile-bg .profile-section {
+  background: color-mix(in srgb, var(--bg-card) 93%, transparent);
+}
+.has-profile-bg .profile-identity {
+  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.5rem 1rem;
+}
+.has-profile-bg .profile-divider {
+  background: color-mix(in srgb, var(--bg-card) 80%, transparent);
+  border-radius: var(--radius);
+  padding: 0.35rem 1rem;
+}
+/* Keep old class names as no-ops so old CSS in profile page doesn't break */
+.profile-bg-fixed {
+  display: none;
+}
+.profile-bg-video {
+  display: none;
   pointer-events: none;
 }
 

@@ -9,6 +9,12 @@
 
   const isVideo = (url?: string | null) => !!(url && url.toLowerCase().endsWith('.mp4'));
 
+  function extractYouTubeId(url: string): string | null {
+    if (!url) return null;
+    const m = /(?:v=|youtu\.be\/|embed\/|shorts\/)([a-zA-Z0-9_-]{11})/.exec(url);
+    return m ? m[1] : null;
+  }
+
   let profile = $state<Profile | null>(null);
   let loading = $state(true);
   let notFound = $state(false);
@@ -228,12 +234,30 @@
     style={customStyle}
   >
     <!-- Profile background layer -->
-    {#if profile.profile_bg && profile.profile_bg_type === 'video'}
-      <video src={profile.profile_bg} autoplay loop muted playsinline class="profile-bg-video"></video>
-    {:else if profile.profile_bg && profile.profile_bg_type === 'image'}
-      <div class="profile-bg-fixed" style="background-image:url({profile.profile_bg})"></div>
-    {:else if profile.profile_bg && (profile.profile_bg_type === 'color' || profile.profile_bg_type === 'gradient')}
-      <div class="profile-bg-fixed" style="background:{profile.profile_bg}"></div>
+    {#if profile.profile_bg && profile.profile_bg_type !== 'none'}
+      {@const brightness = profile.profile_bg_brightness ?? 0.5}
+      <div class="profile-bg-root">
+        {#if profile.profile_bg_type === 'video'}
+          <video src={profile.profile_bg} autoplay loop muted playsinline class="profile-bg-fill"></video>
+        {:else if profile.profile_bg_type === 'youtube'}
+          {@const ytId = extractYouTubeId(profile.profile_bg)}
+          {#if ytId}
+            <div class="profile-bg-fill" style="overflow:hidden">
+              <iframe
+                src="https://www.youtube.com/embed/{ytId}?autoplay=1&mute=1&loop=1&playlist={ytId}&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3"
+                class="profile-bg-youtube-iframe"
+                allow="autoplay"
+                title=""
+              ></iframe>
+            </div>
+          {/if}
+        {:else if profile.profile_bg_type === 'image'}
+          <div class="profile-bg-fill" style="background-image:url({profile.profile_bg})"></div>
+        {:else if profile.profile_bg_type === 'color' || profile.profile_bg_type === 'gradient'}
+          <div class="profile-bg-fill" style="background:{profile.profile_bg}"></div>
+        {/if}
+        <div class="profile-bg-overlay" style="opacity:{1 - brightness}"></div>
+      </div>
     {/if}
     <!-- Banner -->
     {#if profile.banner && isVideo(profile.banner)}

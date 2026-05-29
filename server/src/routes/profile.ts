@@ -46,11 +46,14 @@ router.put('/section-order', requireAuth, (req, res) => {
 });
 
 router.put('/background', requireAuth, (req, res) => {
-  const { profile_bg, profile_bg_type } = req.body;
-  const allowed = ['none', 'color', 'gradient', 'image', 'video'];
+  const { profile_bg, profile_bg_type, profile_bg_brightness } = req.body;
+  const allowed = ['none', 'color', 'gradient', 'image', 'video', 'youtube'];
   const type = allowed.includes(profile_bg_type) ? profile_bg_type : 'none';
-  db.prepare('UPDATE profiles SET profile_bg = ?, profile_bg_type = ? WHERE user_id = ?')
-    .run(profile_bg || null, type, req.user!.id);
+  const brightness = typeof profile_bg_brightness === 'number'
+    ? Math.min(1, Math.max(0, profile_bg_brightness))
+    : 0.5;
+  db.prepare('UPDATE profiles SET profile_bg = ?, profile_bg_type = ?, profile_bg_brightness = ? WHERE user_id = ?')
+    .run(profile_bg || null, type, brightness, req.user!.id);
   return res.json({ ok: true });
 });
 
