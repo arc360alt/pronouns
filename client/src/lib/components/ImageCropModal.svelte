@@ -253,7 +253,7 @@
   }
 
   .crop-modal {
-    background: var(--card-bg);
+    background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     width: 100%;
