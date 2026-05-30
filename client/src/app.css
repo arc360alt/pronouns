@@ -242,18 +242,50 @@ textarea { resize: vertical; min-height: 90px; }
 /* Badges */
 .badge {
   display: inline-block;
-  /* Gradient border: --accent-bg shows in the 1px border ring,
-     --accent-subtle sits in the content area on top of it */
-  border: 1px solid transparent;
-  background-image:
-    linear-gradient(var(--accent-subtle), var(--accent-subtle)),
-    var(--accent-bg);
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
-  color: var(--accent);
+  position: relative;
+  z-index: 0;
   border-radius: 999px;
   padding: 0.2rem 0.75rem;
   font-size: 13px;
+  color: var(--accent); /* fallback for older browsers */
+  /* Gradient text on the label itself */
+  background: var(--accent-bg);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+/* Subtle gradient fill (15% opacity) — same visual as --accent-subtle but gradient-aware */
+.badge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  opacity: 0.15;
+  z-index: -1;
+  pointer-events: none;
+}
+/* Gradient border ring via CSS mask — only the 1px outer ring shows */
+.badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  padding: 1px;
+  box-sizing: border-box;
+  background: var(--accent-bg);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: -1;
+  pointer-events: none;
+}
+/* Gradient on Font Awesome icons inside badges */
+.badge i[class*="fa-"] {
+  background: var(--accent-bg);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Divider */
