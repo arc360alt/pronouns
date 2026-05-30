@@ -288,6 +288,14 @@ textarea { resize: vertical; min-height: 90px; }
   background-clip: text;
 }
 
+/* Gradient text for accent-colored icons outside badges */
+.accent-icon {
+  background: var(--accent-bg);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* Divider */
 hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
 
@@ -309,6 +317,20 @@ hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
   border-color: transparent;
   color: #fff;
   text-decoration: none;
+}
+.profile-link-btn .link-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  background: var(--accent-bg);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.profile-link-btn:hover .link-inner {
+  background: none;
+  -webkit-text-fill-color: #fff;
+  background-clip: border-box;
 }
 
 /* Custom field entry editor */

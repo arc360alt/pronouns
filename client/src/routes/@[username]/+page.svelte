@@ -308,12 +308,12 @@
           {/if}
         </div>
         <div class="profile-meta">
-            {#if profile.pronouns}<span><i class="fa-solid fa-tag" style="color:var(--accent)"></i> {profile.pronouns}</span>{/if}
+            {#if profile.pronouns}<span><i class="fa-solid fa-tag accent-icon"></i> {profile.pronouns}</span>{/if}
             {#if profile.gender}<span>{profile.gender}</span>{/if}
-            {#if profile.occupation}<span><i class="fa-solid fa-briefcase" style="color:var(--accent)"></i> {profile.occupation}</span>{/if}
-            {#if profile.location}<span><i class="fa-solid fa-location-dot" style="color:var(--accent)"></i> {profile.location}</span>{/if}
-            {#if profile.birthday}<span><i class="fa-solid fa-cake-candles" style="color:var(--accent)"></i> {formatBirthday(profile.birthday)}</span>{/if}
-            <span><i class="fa-solid fa-door-open" style="color:var(--accent)"></i> Joined {new Date(profile.created_at).toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+            {#if profile.occupation}<span><i class="fa-solid fa-briefcase accent-icon"></i> {profile.occupation}</span>{/if}
+            {#if profile.location}<span><i class="fa-solid fa-location-dot accent-icon"></i> {profile.location}</span>{/if}
+            {#if profile.birthday}<span><i class="fa-solid fa-cake-candles accent-icon"></i> {formatBirthday(profile.birthday)}</span>{/if}
+            <span><i class="fa-solid fa-door-open accent-icon"></i> Joined {new Date(profile.created_at).toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
           </div>
         {#if profile.badges.filter(b => b.visible).length > 0}
           <div class="badge-row">
@@ -404,7 +404,7 @@
                 <div class="tag-list">
                   {#each profile.links as link}
                     <a href={link.link_url} target="_blank" rel="noopener noreferrer" class="profile-link-btn">
-                      {link.link_label} <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                      <span class="link-inner">{link.link_label} <i class="fa-solid fa-arrow-up-right-from-square"></i></span>
                     </a>
                   {/each}
                 </div>
@@ -412,20 +412,20 @@
               {#if profile.website}
                 <div style="margin-top:0.5rem">
                   <a href={profile.website} target="_blank" rel="noopener noreferrer" style="font-size:13px">
-                    <i class="fa-solid fa-globe" style="color:var(--accent)"></i> {profile.website}
+                    <i class="fa-solid fa-globe accent-icon"></i> {profile.website}
                   </a>
                 </div>
               {/if}
               {#if profile.show_site && profile.site_enabled}
                 <div style="margin-top:0.5rem">
                   <a href="{location.origin}/sites/{profile.username}/" target="_blank" rel="noopener noreferrer" style="font-size:13px">
-                    <i class="fa-solid fa-earth-americas" style="color:var(--accent)"></i> {profile.username}'s personal site
+                    <i class="fa-solid fa-earth-americas accent-icon"></i> {profile.username}'s personal site
                   </a>
                 </div>
               {/if}
 
             {:else if sid === 'clock'}
-              <p class="section-title"><i class="fa-regular fa-clock" style="color:var(--accent)"></i> Current time</p>
+              <p class="section-title"><i class="fa-regular fa-clock accent-icon"></i> Current time</p>
               <div class="clock-display">{currentTime}</div>
               <div class="clock-tz">{profile.timezone!.replace(/_/g, ' ')}</div>
 
