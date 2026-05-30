@@ -5,6 +5,7 @@
   import { api } from '$lib/api';
   import type { SiteFile } from '$lib/types';
   import MonacoEditor from '$lib/components/MonacoEditor.svelte';
+  import PixLoader from '$lib/components/PixLoader.svelte';
 
   const LIMITS = { html: 5, css: 2, js: 1 };
   const FILE_ICON: Record<string, string> = { html: 'fa-code', css: 'fa-palette', js: 'fa-js' };
@@ -257,7 +258,7 @@
   {/if}
 
   {#if loading}
-    <div class="loading">Loading…</div>
+    <div class="loading"><PixLoader /></div>
   {:else}
     <!-- Status card -->
     <div class="card" style="margin-bottom:1.25rem">
@@ -425,7 +426,7 @@
                 {#if chatLoading}
                   <div style="display:flex;align-items:flex-start">
                     <div style="background:var(--bg-input);border-radius:10px;padding:0.5rem 0.75rem;font-size:13px;color:var(--text-muted)">
-                      <i class="fa-solid fa-circle-notch fa-spin"></i> Thinking…
+                      <PixLoader size={16} /> Thinking…
                     </div>
                   </div>
                 {/if}

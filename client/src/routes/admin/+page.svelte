@@ -4,6 +4,7 @@
   import { user, waitForUser } from '$lib/stores';
   import { api } from '$lib/api';
   import Modal from '$lib/components/Modal.svelte';
+  import PixLoader from '$lib/components/PixLoader.svelte';
   import type { Report, AdminUser, Badge } from '$lib/types';
 
   let tab = $state<'reports' | 'users' | 'banner'>('reports');
@@ -154,7 +155,7 @@
 <svelte:head><title>Admin Panel — pronouns</title></svelte:head>
 
 {#if loading}
-  <div class="loading">Loading…</div>
+  <div class="loading"><PixLoader /></div>
 {:else}
 <div class="container">
   <h1 class="page-title">Admin Panel</h1>

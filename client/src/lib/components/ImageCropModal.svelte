@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PixLoader from '$lib/components/PixLoader.svelte';
+
   const CS = 340;   // canvas internal size
   const CR = 134;   // crop circle radius
   const OUT = 512;  // output image size
@@ -231,7 +233,7 @@
       <button class="btn btn-secondary" onclick={onCancel}>Cancel</button>
       <button class="btn btn-primary" onclick={confirm} disabled={!imgEl || applying}>
         {#if applying}
-          <i class="fa-solid fa-circle-notch fa-spin"></i> Processing…
+          <PixLoader size={16} /> Processing…
         {:else}
           <i class="fa-solid fa-check"></i> Apply crop
         {/if}

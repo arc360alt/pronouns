@@ -4,6 +4,7 @@
   import { user } from '$lib/stores';
   import { api } from '$lib/api';
   import Modal from '$lib/components/Modal.svelte';
+  import PixLoader from '$lib/components/PixLoader.svelte';
   import type { Profile } from '$lib/types';
   import { renderMarkdown } from '$lib/markdown';
 
@@ -217,7 +218,7 @@
 </svelte:head>
 
 {#if loading}
-  <div class="loading">Loading profile…</div>
+  <div class="loading"><PixLoader /></div>
 {:else if banned}
   <div class="container error-page">
     <h2>Account suspended</h2>

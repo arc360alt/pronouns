@@ -6,6 +6,7 @@
   import type { Profile, ProfileName, ProfileFlag, ProfileImage, Friend, ProfileLink, CustomField, CustomFieldEntry, Badge } from '$lib/types';
   import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
   import ImageCropModal from '$lib/components/ImageCropModal.svelte';
+  import PixLoader from '$lib/components/PixLoader.svelte';
 
   // Basic profile fields
   let displayName = $state('');
@@ -807,7 +808,7 @@
 <svelte:head><title>Edit Profile — pronouns</title></svelte:head>
 
 {#if loading}
-  <div class="loading">Loading…</div>
+  <div class="loading"><PixLoader /></div>
 {:else}
 <div class="container" style="max-width:640px">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
