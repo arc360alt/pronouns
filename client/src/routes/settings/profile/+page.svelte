@@ -213,6 +213,7 @@
   let profileBgDir = $state('135deg');
   let profileBgUrl = $state('');
   let profileBgBrightness = $state(0.5);
+  let hideBannerWithBg = $state(false);
   let profileBgUploading = $state(false);
 
   function extractYouTubeId(url: string): string | null {
@@ -250,6 +251,7 @@
       accentGradient = !!(data.custom_color_2);
       profileBgType = (data.profile_bg_type as any) || 'none';
       profileBgBrightness = data.profile_bg_brightness ?? 0.5;
+      hideBannerWithBg = !!data.hide_banner_with_bg;
       if (data.profile_bg) {
         if (profileBgType === 'color') {
           profileBgColor = data.profile_bg;
@@ -472,6 +474,7 @@
         profile_bg: bg,
         profile_bg_type: profileBgType,
         profile_bg_brightness: profileBgBrightness,
+        hide_banner_with_bg: hideBannerWithBg,
       });
       showMsg('Background saved');
     } catch (err) {
@@ -507,7 +510,7 @@
         const url = await uploadFile(compressed);
         profileBgUrl = url;
         profileBgType = 'image';
-        await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: 'image', profile_bg_brightness: profileBgBrightness });
+        await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: 'image', profile_bg_brightness: profileBgBrightness, hide_banner_with_bg: hideBannerWithBg });
       } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
       finally { profileBgUploading = false; input.value = ''; }
       return;
@@ -517,7 +520,7 @@
       const url = await uploadFile(file);
       profileBgUrl = url;
       profileBgType = file.type === 'video/mp4' ? 'video' : 'image';
-      await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType, profile_bg_brightness: profileBgBrightness });
+      await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType, profile_bg_brightness: profileBgBrightness, hide_banner_with_bg: hideBannerWithBg });
       loadStorageUsage();
     } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
     finally { profileBgUploading = false; input.value = ''; }
@@ -1117,9 +1120,17 @@
         disabled={!extractYouTubeId(profileBgUrl)}>Save background</button>
     {/if}
 
-    <!-- Brightness slider — shown for all non-none types -->
+    <!-- Merge banner option + brightness — shown for all non-none types -->
     {#if profileBgType !== 'none'}
       <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+        <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:13px;cursor:pointer;margin-bottom:0.75rem">
+          <input type="checkbox" bind:checked={hideBannerWithBg} style="width:auto;margin-top:2px;flex-shrink:0"
+            onchange={saveBg} />
+          <span>
+            <strong style="display:block;margin-bottom:0.15rem">Hide banner &amp; merge with background</strong>
+            <span style="color:var(--text-muted);font-size:12px">Your banner will be hidden so the background fills the page seamlessly from top to bottom.</span>
+          </span>
+        </label>
         <label class="form-label" style="display:flex;justify-content:space-between">
           <span>Background brightness</span>
           <strong>{Math.round(profileBgBrightness * 100)}%</strong>

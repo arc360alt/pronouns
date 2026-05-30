@@ -133,6 +133,7 @@ addCol('profiles', 'section_order', 'TEXT');
 addCol('profiles', 'profile_bg', 'TEXT DEFAULT NULL');
 addCol('profiles', 'profile_bg_type', "TEXT NOT NULL DEFAULT 'none'");
 addCol('profiles', 'profile_bg_brightness', 'REAL DEFAULT 0.5');
+addCol('profiles', 'hide_banner_with_bg', 'INTEGER DEFAULT 0');
 addCol('profiles', 'custom_color_2', 'TEXT DEFAULT NULL');
 addCol('profiles', 'custom_color_dir', "TEXT NOT NULL DEFAULT '135deg'");
 addCol('users', 'google_id', 'TEXT');
@@ -238,7 +239,7 @@ export function getFullProfile(userId: number) {
            p.profile_picture, p.banner, p.banner_position, p.custom_color, p.show_friends,
            p.location, p.occupation, p.birthday, p.website, p.timezone,
            p.banner_height, p.avatar_size, p.show_site, p.section_order,
-           p.profile_bg, p.profile_bg_type, p.profile_bg_brightness, p.custom_color_2, p.custom_color_dir,
+           p.profile_bg, p.profile_bg_type, p.profile_bg_brightness, p.hide_banner_with_bg, p.custom_color_2, p.custom_color_dir,
            CASE WHEN s.enabled = 1 THEN 1 ELSE 0 END AS site_enabled
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id

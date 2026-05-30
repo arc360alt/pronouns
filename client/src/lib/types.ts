@@ -91,6 +91,7 @@ export interface Profile {
   profile_bg: string | null;
   profile_bg_type: string;
   profile_bg_brightness: number;
+  hide_banner_with_bg: boolean | number;
   show_friends: boolean | number;
   show_site: boolean | number;
   site_enabled: boolean | number;

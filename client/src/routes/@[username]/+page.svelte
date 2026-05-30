@@ -168,6 +168,8 @@
 
   let bannerHeightPx = $derived(Math.min(400, Math.max(100, profile?.banner_height ?? 240)));
   let avatarSizePx = $derived(Math.min(180, Math.max(60, profile?.avatar_size ?? 120)));
+  let bgActive = $derived(!!(profile?.profile_bg && profile.profile_bg_type && profile.profile_bg_type !== 'none'));
+  let hideBanner = $derived(bgActive && !!profile?.hide_banner_with_bg);
 
   onMount(async () => {
     const username = $page.params.username;
@@ -259,26 +261,28 @@
         <div class="profile-bg-overlay" style="opacity:{1 - brightness}"></div>
       </div>
     {/if}
-    <!-- Banner -->
-    {#if profile.banner && isVideo(profile.banner)}
-      <div class="profile-banner has-image" style="height:{bannerHeightPx}px;position:relative;overflow:hidden">
-        <video src={profile.banner} autoplay loop muted playsinline
-          style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:{profile.banner_position || '50% 50%'}"></video>
-      </div>
-    {:else}
-      <div
-        class="profile-banner"
-        class:has-image={!!profile.banner}
-        style={profile.banner
-          ? `height:${bannerHeightPx}px;background-image:url(${profile.banner});background-position:${profile.banner_position || '50% 50%'}`
-          : `height:${bannerHeightPx}px`}
-      ></div>
+    <!-- Banner — hidden when user has a background set and chose to merge -->
+    {#if !hideBanner}
+      {#if profile.banner && isVideo(profile.banner)}
+        <div class="profile-banner has-image" style="height:{bannerHeightPx}px;position:relative;overflow:hidden">
+          <video src={profile.banner} autoplay loop muted playsinline
+            style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:{profile.banner_position || '50% 50%'}"></video>
+        </div>
+      {:else}
+        <div
+          class="profile-banner"
+          class:has-image={!!profile.banner}
+          style={profile.banner
+            ? `height:${bannerHeightPx}px;background-image:url(${profile.banner});background-position:${profile.banner_position || '50% 50%'}`
+            : `height:${bannerHeightPx}px`}
+        ></div>
+      {/if}
     {/if}
 
-    <!-- Header: avatar row (overlaps banner) + identity row (always on page bg) -->
+    <!-- Header: avatar row + identity row -->
     <div class="container">
-      <!-- Avatar centered over the banner/page boundary -->
-      <div class="profile-header" style="margin-top:{-avatarSizePx / 2}px">
+      <!-- When banner is hidden, pad from top instead of overlapping the banner -->
+      <div class="profile-header" style="margin-top:{hideBanner ? '2.5rem' : -avatarSizePx / 2 + 'px'}">
         {#if profile.profile_picture}
           {#if isVideo(profile.profile_picture)}
             <video src={profile.profile_picture} autoplay loop muted playsinline
