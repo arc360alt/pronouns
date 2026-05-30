@@ -502,6 +502,8 @@ button.pref-btn:hover { opacity: 1; background: none; }
 .has-profile-bg .card,
 .has-profile-bg .profile-section {
   background: color-mix(in srgb, var(--bg-card) 93%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 .has-profile-bg .profile-identity {
   background: color-mix(in srgb, var(--bg-card) 88%, transparent);

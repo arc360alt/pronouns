@@ -1030,7 +1030,7 @@
         <button type="button"
           class="btn btn-sm {profileBgType === val ? 'btn-primary' : 'btn-secondary'}"
           style="font-size:12px"
-          onclick={() => profileBgType = val}>
+          onclick={() => { profileBgType = val as typeof profileBgType; if (val === 'none') saveBg(); }}>
           <i class="{icon.startsWith('fa-brands') ? icon : 'fa-solid ' + icon}"></i> {label}
         </button>
       {/each}
