@@ -808,7 +808,7 @@
 <svelte:head><title>Edit Profile — pronouns</title></svelte:head>
 
 {#if loading}
-  <div class="loading"><PixLoader /></div>
+  <div class="loading"><PixLoader size={48} /></div>
 {:else}
 <div class="container" style="max-width:640px">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">

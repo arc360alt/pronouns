@@ -218,7 +218,7 @@
 </svelte:head>
 
 {#if loading}
-  <div class="loading"><PixLoader /></div>
+  <div class="loading"><PixLoader size={48} /></div>
 {:else if banned}
   <div class="container error-page">
     <h2>Account suspended</h2>

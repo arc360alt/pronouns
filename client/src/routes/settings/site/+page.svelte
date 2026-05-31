@@ -258,7 +258,7 @@
   {/if}
 
   {#if loading}
-    <div class="loading"><PixLoader /></div>
+    <div class="loading"><PixLoader size={48} /></div>
   {:else}
     <!-- Status card -->
     <div class="card" style="margin-bottom:1.25rem">
@@ -426,7 +426,7 @@
                 {#if chatLoading}
                   <div style="display:flex;align-items:flex-start">
                     <div style="background:var(--bg-input);border-radius:10px;padding:0.5rem 0.75rem;font-size:13px;color:var(--text-muted)">
-                      <PixLoader size={16} /> Thinking…
+                      <PixLoader size={28} /> Thinking…
                     </div>
                   </div>
                 {/if}

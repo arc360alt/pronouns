@@ -233,7 +233,7 @@
       <button class="btn btn-secondary" onclick={onCancel}>Cancel</button>
       <button class="btn btn-primary" onclick={confirm} disabled={!imgEl || applying}>
         {#if applying}
-          <PixLoader size={16} /> Processing…
+          <PixLoader size={20} /> Processing…
         {:else}
           <i class="fa-solid fa-check"></i> Apply crop
         {/if}

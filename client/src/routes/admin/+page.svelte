@@ -155,7 +155,7 @@
 <svelte:head><title>Admin Panel — pronouns</title></svelte:head>
 
 {#if loading}
-  <div class="loading"><PixLoader /></div>
+  <div class="loading"><PixLoader size={48} /></div>
 {:else}
 <div class="container">
   <h1 class="page-title">Admin Panel</h1>
