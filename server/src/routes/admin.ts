@@ -110,4 +110,29 @@ router.delete('/users/:id/badges/:badgeId', requireAdmin, (req, res) => {
   return res.json({ ok: true });
 });
 
+router.get('/feedback', requireAdmin, (_req, res) => {
+  const items = db.prepare(`
+    SELECT f.*, u.username
+    FROM feedback f
+    LEFT JOIN users u ON f.user_id = u.id
+    ORDER BY
+      CASE f.status WHEN 'unread' THEN 0 ELSE 1 END,
+      f.created_at DESC
+  `).all();
+  return res.json(items);
+});
+
+router.put('/feedback/:id', requireAdmin, (req, res) => {
+  const { status, admin_note } = req.body;
+  if (!['unread', 'read', 'resolved'].includes(status))
+    return res.status(400).json({ error: 'Invalid status' });
+
+  const result = db.prepare(
+    'UPDATE feedback SET status = ?, admin_note = ? WHERE id = ?'
+  ).run(status, admin_note || null, req.params.id);
+
+  if (result.changes === 0) return res.status(404).json({ error: 'Feedback not found' });
+  return res.json({ message: 'Feedback updated' });
+});
+
 export default router;

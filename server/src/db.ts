@@ -112,6 +112,16 @@ db.exec(`
     FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (reported_user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'unread',
+    admin_note TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
 // Migrate existing databases to add new columns gracefully

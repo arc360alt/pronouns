@@ -5,11 +5,12 @@
   import { api } from '$lib/api';
   import Modal from '$lib/components/Modal.svelte';
   import PixLoader from '$lib/components/PixLoader.svelte';
-  import type { Report, AdminUser, Badge } from '$lib/types';
+  import type { Report, AdminUser, Badge, Feedback } from '$lib/types';
 
-  let tab = $state<'reports' | 'users' | 'banner'>('reports');
+  let tab = $state<'reports' | 'users' | 'banner' | 'feedback'>('reports');
   let reports = $state<Report[]>([]);
   let users = $state<AdminUser[]>([]);
+  let feedbackItems = $state<Feedback[]>([]);
   let loading = $state(true);
   let msg = $state('');
 
@@ -29,13 +30,15 @@
   });
 
   async function loadAll() {
-    const [r, u, b] = await Promise.all([
+    const [r, u, b, f] = await Promise.all([
       api.get<Report[]>('/api/admin/reports'),
       api.get<AdminUser[]>('/api/admin/users'),
       api.get<{ active: boolean; text: string; color: string; btn_text: string; btn_url: string }>('/api/admin/banner'),
+      api.get<Feedback[]>('/api/admin/feedback'),
     ]);
     reports = r;
     users = u;
+    feedbackItems = f;
     bannerActive = b.active;
     bannerText = b.text;
     bannerColor = b.color || '#e07a27';
@@ -104,7 +107,18 @@
     setTimeout(() => msg = '', 3000);
   }
 
+  async function updateFeedback(id: number, status: string, admin_note?: string) {
+    try {
+      await api.put(`/api/admin/feedback/${id}`, { status, admin_note });
+      feedbackItems = feedbackItems.map(f => f.id === id ? { ...f, status: status as Feedback['status'], admin_note: admin_note ?? f.admin_note } : f);
+      showMsg('Feedback updated');
+    } catch (err) {
+      showMsg(err instanceof Error ? err.message : 'Failed');
+    }
+  }
+
   let pendingCount = $derived(reports.filter(r => r.status === 'pending').length);
+  let unreadFeedback = $derived(feedbackItems.filter(f => f.status === 'unread').length);
 
   // Badge management modal
   let badgeModalUser = $state<AdminUser | null>(null);
@@ -171,6 +185,9 @@
     </button>
     <button class="tab-btn" class:active={tab === 'banner'} onclick={() => tab = 'banner'}>
       Site Banner
+    </button>
+    <button class="tab-btn" class:active={tab === 'feedback'} onclick={() => tab = 'feedback'}>
+      Feedback {#if unreadFeedback > 0}<span style="background:var(--accent);color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px">{unreadFeedback}</span>{/if}
     </button>
   </div>
 
@@ -349,6 +366,68 @@
         {bannerSaving ? 'Saving…' : 'Save banner'}
       </button>
     </div>
+  {/if}
+
+  {#if tab === 'feedback'}
+    {#if feedbackItems.length === 0}
+      <p style="color:var(--text-muted)">No feedback submitted yet.</p>
+    {:else}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Message</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each feedbackItems as f}
+              <tr style={f.status === 'unread' ? 'font-weight:500' : ''}>
+                <td style="white-space:nowrap">
+                  {#if f.username}
+                    <a href="/@{f.username}">@{f.username}</a>
+                  {:else}
+                    <span style="color:var(--text-muted)">deleted</span>
+                  {/if}
+                </td>
+                <td style="max-width:320px;white-space:pre-wrap;word-break:break-word;font-size:13px">{f.message}</td>
+                <td>
+                  <span style="color:{f.status === 'unread' ? 'var(--accent)' : f.status === 'resolved' ? 'var(--success)' : 'var(--text-muted)'}">
+                    {f.status}
+                  </span>
+                </td>
+                <td style="white-space:nowrap;color:var(--text-muted)">{new Date(f.created_at).toLocaleDateString()}</td>
+                <td>
+                  <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+                    {#if f.status === 'unread'}
+                      <button class="btn btn-secondary btn-sm" onclick={() => updateFeedback(f.id, 'read')}>Mark read</button>
+                    {/if}
+                    {#if f.status !== 'resolved'}
+                      <button class="btn btn-sm" style="background:var(--success);color:#fff"
+                        onclick={() => updateFeedback(f.id, 'resolved')}>Resolve</button>
+                    {/if}
+                    {#if f.status !== 'unread'}
+                      <button class="btn btn-ghost btn-sm" onclick={() => updateFeedback(f.id, 'unread')}>Mark unread</button>
+                    {/if}
+                    {#if f.username}
+                      {@const fbUser = users.find(u => u.username === f.username)}
+                      {#if fbUser && fbUser.id !== $user?.id}
+                        <button class="btn btn-danger btn-sm" onclick={() => toggleBan(fbUser)}>
+                          {fbUser.is_banned ? 'Unban' : 'Ban user'}
+                        </button>
+                      {/if}
+                    {/if}
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
   {/if}
 </div>
 {/if}

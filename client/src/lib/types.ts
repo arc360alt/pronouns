@@ -135,3 +135,13 @@ export interface AdminUser {
   is_banned: number;
   created_at: string;
 }
+
+export interface Feedback {
+  id: number;
+  user_id: number;
+  username: string;
+  message: string;
+  status: 'unread' | 'read' | 'resolved';
+  admin_note: string | null;
+  created_at: string;
+}

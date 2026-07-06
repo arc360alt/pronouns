@@ -39,6 +39,7 @@
         <a href="/@{$user.username}"><i class="fa-solid fa-circle-user"></i> @{$user.username}</a>
         <a href="/settings/profile"><i class="fa-solid fa-pen"></i> Edit Profile</a>
         <a href="/settings"><i class="fa-solid fa-gear"></i> Settings</a>
+        <a href="/feedback"><i class="fa-solid fa-comment-dots"></i> Feedback</a>
         {#if $user.is_admin}
           <a href="/admin"><i class="fa-solid fa-shield-halved"></i> Admin</a>
         {/if}
@@ -75,6 +76,7 @@
       <a href="/settings/profile"><i class="fa-solid fa-pen"></i> Edit Profile</a>
       <a href="/settings/site"><i class="fa-solid fa-globe"></i> My Site</a>
       <a href="/settings"><i class="fa-solid fa-gear"></i> Settings</a>
+      <a href="/feedback"><i class="fa-solid fa-comment-dots"></i> Feedback</a>
       {#if $user.is_admin}
         <a href="/admin"><i class="fa-solid fa-shield-halved"></i> Admin</a>
       {/if}
