@@ -848,6 +848,8 @@ tr:hover td { background: var(--bg-hover); }
 .update-changes { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
 .update-changes li { font-size: 13px; color: var(--text-muted); line-height: 1.5; padding-left: 1rem; position: relative; }
 .update-changes li::before { content: '–'; position: absolute; left: 0; color: var(--text-muted); }
+.updates-show-more { background: none; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted); font-size: 13px; padding: 0.5rem 1rem; cursor: pointer; margin-top: 0.75rem; transition: color 0.15s, border-color 0.15s; }
+.updates-show-more:hover { color: var(--text); border-color: var(--text-muted); }
 
 /* ── Mobile responsive ── */
 @media (max-width: 880px) {

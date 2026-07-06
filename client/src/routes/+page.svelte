@@ -2,6 +2,10 @@
   import { user } from '$lib/stores';
   import updates from '$lib/updates.json';
 
+  const SHOW_DEFAULT = 3;
+  let showAll = $state(false);
+  let visible = $derived(showAll ? updates : updates.slice(0, SHOW_DEFAULT));
+
   function fmtDate(iso: string) {
     return new Date(iso).toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
   }
@@ -64,7 +68,7 @@
         <i class="fa-solid fa-clock-rotate-left"></i> Recent Updates
       </h2>
       <div class="updates-list">
-        {#each updates as update, i}
+        {#each visible as update, i}
           <div class="update-entry" class:update-latest={i === 0}>
             <div class="update-meta">
               <span class="update-version">{update.version}</span>
@@ -80,6 +84,15 @@
           </div>
         {/each}
       </div>
+      {#if updates.length > SHOW_DEFAULT}
+        <button class="updates-show-more" onclick={() => showAll = !showAll}>
+          {#if showAll}
+            <i class="fa-solid fa-chevron-up"></i> Show less
+          {:else}
+            <i class="fa-solid fa-chevron-down"></i> Show {updates.length - SHOW_DEFAULT} older update{updates.length - SHOW_DEFAULT === 1 ? '' : 's'}
+          {/if}
+        </button>
+      {/if}
     </div>
   </div>
 </div>

@@ -6,7 +6,8 @@
     "changes": [
       "Removed per-file size limits for profile pictures, banners, and backgrounds",
       "The only limit is now the 50 MB total storage cap per account",
-      "Simplified upload flow, files go straight to upload without compression steps"
+      "Simplified upload flow, files go straight to upload without compression steps",
+      "Homepage update section now shows 3 latest entries with a 'show more' button for older ones"
     ]
   },
   {
@@ -40,6 +41,22 @@
       "Profile picture uploads now open a crop editor to choose what part of the image to show",
       "Added link warning popup when clicking links in bios",
       "Increased upload limits and added auto-compression for images"
+    ]
+  },
+  {
+    "version": "1.1.0",
+    "date": "2026-06-15",
+    "title": "I forgor",
+    "changes": [
+      "i lowk forgot what happened before 1.2 so yeah this is just a filler update"
+    ]
+  },
+  {
+    "version": "1.0.0",
+    "date": "2026-06-15",
+    "title": "I forgor",
+    "changes": [
+      "i lowk forgot what happened before 1.2 so yeah this is just a filler update"
     ]
   }
 ]
