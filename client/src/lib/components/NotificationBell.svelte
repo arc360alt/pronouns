@@ -15,11 +15,14 @@
     display: inline-flex;
     align-items: center;
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: 0.95rem;
     text-decoration: none;
-    padding: 0.1rem 0.15rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.35rem 0.55rem;
+    transition: color 0.15s, border-color 0.15s;
   }
-  .notif-link:hover { color: var(--text); }
+  .notif-link:hover { color: var(--text); border-color: var(--text-muted); text-decoration: none; }
   .notif-count {
     position: absolute;
     top: -5px;

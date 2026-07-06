@@ -73,9 +73,9 @@
       <i class="fa-solid fa-circle-notch fa-spin" style="font-size:1.5rem"></i>
     </div>
   {:else if notifications.length === 0}
-    <div class="card" style="text-align:center;padding:3rem 2rem">
-      <i class="fa-regular fa-bell-slash" style="font-size:2.5rem;color:var(--text-muted);display:block;margin-bottom:1rem"></i>
-      <p style="font-weight:600;margin-bottom:0.35rem">Nothing here yet</p>
+    <div class="card" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:3rem 2rem;gap:0.5rem">
+      <i class="fa-regular fa-bell-slash" style="font-size:2.5rem;color:var(--text-muted)"></i>
+      <p style="font-weight:600;margin-top:0.5rem">Nothing here yet</p>
       <p style="font-size:14px;color:var(--text-muted)">Notifications from admins, feedback replies, and badges will show up here.</p>
     </div>
   {:else}
