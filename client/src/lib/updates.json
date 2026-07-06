@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.5.0",
+    "date": "2026-07-06",
+    "title": "Notifications, Forced Themes & More",
+    "changes": [
+      "Added notification bell in the navbar — admins can message users directly, reply to feedback, and ban/unban events now send automatic notifications",
+      "Admins can now reply to feedback submissions, which sends the reply as a notification to the user and marks the feedback resolved",
+      "Added forced profile theme — profile owners can make their profile always display in dark or light mode regardless of the visitor's setting",
+      "Fixed site-wide banner clipping — the optional button and long messages no longer overlap the dismiss (×) button on PC or mobile"
+    ]
+  },
+  {
     "version": "1.4.1",
     "date": "2026-07-06",
     "title": "Upload Limit Overhaul",

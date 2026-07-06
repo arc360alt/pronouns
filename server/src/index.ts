@@ -13,6 +13,7 @@ import uploadRoutes from './routes/upload';
 import reportRoutes from './routes/reports';
 import adminRoutes from './routes/admin';
 import feedbackRoutes from './routes/feedback';
+import notificationRoutes from './routes/notifications';
 import siteRoutes from './routes/site';
 import sitebuildRoutes, { publicRouter as sitebuildPublic } from './routes/sitebuilder';
 
@@ -44,6 +45,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/site', siteRoutes);
 app.use('/api/sitebuilder', sitebuildRoutes);
 app.use('/sites', sitebuildPublic);

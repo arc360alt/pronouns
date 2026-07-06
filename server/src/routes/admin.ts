@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db, { BADGE_DEFS } from '../db';
 import { requireAdmin } from '../middleware/auth';
+import { createNotification } from './notifications';
 
 const router = Router();
 
@@ -40,12 +41,26 @@ router.get('/users', requireAdmin, (req, res) => {
 });
 
 router.put('/users/:id/ban', requireAdmin, (req, res) => {
-  const { banned } = req.body;
+  const { banned, reason } = req.body;
   if (parseInt(req.params.id) === req.user!.id)
     return res.status(400).json({ error: 'Cannot ban yourself' });
 
   const result = db.prepare('UPDATE users SET is_banned = ? WHERE id = ?').run(banned ? 1 : 0, req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: 'User not found' });
+
+  const userId = parseInt(req.params.id);
+  if (banned) {
+    createNotification(userId, 'system',
+      'Your account has been banned',
+      reason?.trim() || 'Your account has been banned by an administrator. If you believe this is a mistake, please contact support.'
+    );
+  } else {
+    createNotification(userId, 'system',
+      'Your account ban has been lifted',
+      'Your account has been reinstated. Please review our community guidelines to avoid future issues.'
+    );
+  }
+
   return res.json({ message: banned ? 'User banned' : 'User unbanned' });
 });
 
@@ -107,6 +122,34 @@ router.delete('/users/:id/badges/:badgeId', requireAdmin, (req, res) => {
   const { id, badgeId } = req.params;
   db.prepare('DELETE FROM user_badges WHERE user_id = ? AND badge_id = ? AND awarded_by IS NOT NULL')
     .run(id, badgeId);
+  return res.json({ ok: true });
+});
+
+router.post('/notify/:userId', requireAdmin, (req, res) => {
+  const { title, body } = req.body;
+  if (!title?.trim() || !body?.trim())
+    return res.status(400).json({ error: 'Title and body are required' });
+
+  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  createNotification(parseInt(req.params.userId), 'message', title.trim(), body.trim());
+  return res.json({ ok: true });
+});
+
+router.post('/feedback/:id/reply', requireAdmin, (req, res) => {
+  const { reply } = req.body;
+  if (!reply?.trim()) return res.status(400).json({ error: 'Reply text is required' });
+
+  const row = db.prepare('SELECT * FROM feedback WHERE id = ?').get(req.params.id) as { user_id: number; message: string } | undefined;
+  if (!row) return res.status(404).json({ error: 'Feedback not found' });
+
+  db.prepare('UPDATE feedback SET status = ? WHERE id = ?').run('resolved', req.params.id);
+  createNotification(row.user_id, 'feedback_reply',
+    'Response to your feedback',
+    reply.trim()
+  );
+
   return res.json({ ok: true });
 });
 

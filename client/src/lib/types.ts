@@ -92,6 +92,7 @@ export interface Profile {
   profile_bg_type: string;
   profile_bg_brightness: number;
   hide_banner_with_bg: boolean | number;
+  forced_theme: 'dark' | 'light' | null;
   show_friends: boolean | number;
   show_site: boolean | number;
   site_enabled: boolean | number;
@@ -143,5 +144,15 @@ export interface Feedback {
   message: string;
   status: 'unread' | 'read' | 'resolved';
   admin_note: string | null;
+  created_at: string;
+}
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  type: 'message' | 'feedback_reply' | 'system';
+  title: string;
+  body: string;
+  read: number;
   created_at: string;
 }

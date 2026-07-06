@@ -120,6 +120,49 @@
   let pendingCount = $derived(reports.filter(r => r.status === 'pending').length);
   let unreadFeedback = $derived(feedbackItems.filter(f => f.status === 'unread').length);
 
+  // Feedback reply modal
+  let replyFeedback = $state<Feedback | null>(null);
+  let replyText = $state('');
+  let replySending = $state(false);
+
+  async function sendReply() {
+    if (!replyFeedback || !replyText.trim()) return;
+    replySending = true;
+    try {
+      await api.post(`/api/admin/feedback/${replyFeedback.id}/reply`, { reply: replyText });
+      feedbackItems = feedbackItems.map(f => f.id === replyFeedback!.id ? { ...f, status: 'resolved' as const } : f);
+      showMsg(`Reply sent to @${replyFeedback.username}`);
+      replyFeedback = null;
+      replyText = '';
+    } catch (err) {
+      showMsg(err instanceof Error ? err.message : 'Failed to send reply');
+    } finally {
+      replySending = false;
+    }
+  }
+
+  // Message user modal
+  let msgModalUser = $state<AdminUser | null>(null);
+  let msgTitle = $state('');
+  let msgBody = $state('');
+  let msgSending = $state(false);
+
+  async function sendUserMessage() {
+    if (!msgModalUser || !msgTitle.trim() || !msgBody.trim()) return;
+    msgSending = true;
+    try {
+      await api.post(`/api/admin/notify/${msgModalUser.id}`, { title: msgTitle, body: msgBody });
+      showMsg(`Message sent to @${msgModalUser.username}`);
+      msgModalUser = null;
+      msgTitle = '';
+      msgBody = '';
+    } catch (err) {
+      showMsg(err instanceof Error ? err.message : 'Failed to send message');
+    } finally {
+      msgSending = false;
+    }
+  }
+
   // Badge management modal
   let badgeModalUser = $state<AdminUser | null>(null);
   let allBadgeDefs = $state<Badge[]>([]);
@@ -306,6 +349,9 @@
                   <button class="btn btn-ghost btn-sm" onclick={() => openBadgeModal(u)}>
                     <i class="fa-solid fa-medal"></i> Badges
                   </button>
+                  <button class="btn btn-ghost btn-sm" onclick={() => { msgModalUser = u; msgTitle = ''; msgBody = ''; }}>
+                    <i class="fa-solid fa-envelope"></i> Message
+                  </button>
                 </div>
               </td>
             </tr>
@@ -402,6 +448,10 @@
                 <td style="white-space:nowrap;color:var(--text-muted)">{new Date(f.created_at).toLocaleDateString()}</td>
                 <td>
                   <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+                    <button class="btn btn-sm" style="background:var(--accent);color:#fff"
+                      onclick={() => { replyFeedback = f; replyText = ''; }}>
+                      <i class="fa-solid fa-reply"></i> Reply
+                    </button>
                     {#if f.status === 'unread'}
                       <button class="btn btn-secondary btn-sm" onclick={() => updateFeedback(f.id, 'read')}>Mark read</button>
                     {/if}
@@ -452,6 +502,55 @@
             {/if}
           </div>
         {/each}
+      </div>
+    {/if}
+  {/snippet}
+</Modal>
+
+<!-- Feedback reply modal -->
+<Modal open={!!replyFeedback} title="Reply to feedback" onClose={() => replyFeedback = null}>
+  {#snippet children()}
+    {#if replyFeedback}
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
+        Replying to <strong>@{replyFeedback.username}</strong> — your message will appear as a notification in their bell. The feedback will be marked resolved.
+      </p>
+      <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;margin-bottom:1rem;font-size:13px;color:var(--text-muted);white-space:pre-wrap;max-height:120px;overflow-y:auto">
+        {replyFeedback.message}
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="reply-text">Your reply</label>
+        <textarea id="reply-text" bind:value={replyText} rows={4} placeholder="Write your response…" style="resize:vertical"></textarea>
+      </div>
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
+        <button class="btn btn-secondary" onclick={() => replyFeedback = null}>Cancel</button>
+        <button class="btn btn-primary" disabled={replySending || !replyText.trim()} onclick={sendReply}>
+          {replySending ? 'Sending…' : 'Send reply'}
+        </button>
+      </div>
+    {/if}
+  {/snippet}
+</Modal>
+
+<!-- Send message to user modal -->
+<Modal open={!!msgModalUser} title="Message @{msgModalUser?.username ?? ''}" onClose={() => msgModalUser = null}>
+  {#snippet children()}
+    {#if msgModalUser}
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
+        This will appear as a notification in <strong>@{msgModalUser.username}</strong>'s bell.
+      </p>
+      <div class="form-group">
+        <label class="form-label" for="msg-title">Title</label>
+        <input id="msg-title" type="text" bind:value={msgTitle} placeholder="e.g. Important account notice" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="msg-body">Message</label>
+        <textarea id="msg-body" bind:value={msgBody} rows={4} placeholder="Your message…" style="resize:vertical"></textarea>
+      </div>
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
+        <button class="btn btn-secondary" onclick={() => msgModalUser = null}>Cancel</button>
+        <button class="btn btn-primary" disabled={msgSending || !msgTitle.trim() || !msgBody.trim()} onclick={sendUserMessage}>
+          {msgSending ? 'Sending…' : 'Send message'}
+        </button>
       </div>
     {/if}
   {/snippet}

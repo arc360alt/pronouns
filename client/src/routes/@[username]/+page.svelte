@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { user } from '$lib/stores';
   import { api } from '$lib/api';
   import Modal from '$lib/components/Modal.svelte';
@@ -172,11 +172,23 @@
   let bgActive = $derived(!!(profile?.profile_bg && profile.profile_bg_type && profile.profile_bg_type !== 'none'));
   let hideBanner = $derived(bgActive && !!profile?.hide_banner_with_bg);
 
+  let originalTheme: string | null = null;
+
+  onDestroy(() => {
+    if (originalTheme !== null && typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', originalTheme);
+    }
+  });
+
   onMount(async () => {
     const username = $page.params.username;
     try {
       const data = await api.get<Profile>(`/api/users/${username}`);
       profile = data;
+      if (data.forced_theme && typeof document !== 'undefined') {
+        originalTheme = document.documentElement.getAttribute('data-theme');
+        document.documentElement.setAttribute('data-theme', data.forced_theme);
+      }
       if (data.custom_color) {
         const c = data.custom_color;
         // Derive --accent-subtle from the custom hex so badge backgrounds use the right color

@@ -13,18 +13,20 @@ router.get('/', requireAuth, (req, res) => {
 router.put('/', requireAuth, (req, res) => {
   const { display_name, bio, gender, pronouns, custom_color, custom_color_2, custom_color_dir,
           show_friends, location, occupation, birthday, website, timezone,
-          banner_height, avatar_size, show_site } = req.body;
+          banner_height, avatar_size, show_site, forced_theme } = req.body;
   const clamp = (v: unknown, min: number, max: number, def: number) => {
     const n = parseInt(v as string);
     return isNaN(n) ? def : Math.min(max, Math.max(min, n));
   };
+  const allowedThemes = ['dark', 'light'];
+  const theme = allowedThemes.includes(forced_theme) ? forced_theme : null;
   db.prepare(`
     UPDATE profiles SET
       display_name = ?, bio = ?, gender = ?, pronouns = ?,
       custom_color = ?, custom_color_2 = ?, custom_color_dir = ?,
       show_friends = ?,
       location = ?, occupation = ?, birthday = ?, website = ?, timezone = ?,
-      banner_height = ?, avatar_size = ?, show_site = ?
+      banner_height = ?, avatar_size = ?, show_site = ?, forced_theme = ?
     WHERE user_id = ?
   `).run(
     display_name || null, bio || null, gender || null, pronouns || null,
@@ -32,7 +34,7 @@ router.put('/', requireAuth, (req, res) => {
     show_friends ? 1 : 0,
     location || null, occupation || null, birthday || null, website || null, timezone || null,
     clamp(banner_height, 100, 400, 240), clamp(avatar_size, 60, 180, 120),
-    show_site ? 1 : 0,
+    show_site ? 1 : 0, theme,
     req.user!.id
   );
   return res.json({ message: 'Profile updated' });

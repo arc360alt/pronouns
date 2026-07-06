@@ -2,6 +2,7 @@
   import { user, theme } from '$lib/stores';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
+  import NotificationBell from '$lib/components/NotificationBell.svelte';
 
   let menuOpen = $state(false);
 
@@ -44,6 +45,7 @@
           <a href="/admin"><i class="fa-solid fa-shield-halved"></i> Admin</a>
         {/if}
       {/if}
+      {#if $user}<NotificationBell />{/if}
       <button class="btn-theme" onclick={toggleTheme}>
         {#if $theme === 'dark'}
           <i class="fa-solid fa-sun"></i> Light mode

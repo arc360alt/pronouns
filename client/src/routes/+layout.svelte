@@ -54,7 +54,7 @@
 
 <footer class="footer">
   <div class="container">
-    pronouns · an open source app · <a href="https://github.com/arc360alt/pronouns" target="_blank" rel="noopener">Github</a>
+    pronouns · an app by arc360 · <a href="https://github.com/arc360alt/pronouns" target="_blank" rel="noopener">Github</a>
     {#if memberCount !== null}
        |  <strong>{memberCount.toLocaleString()}</strong> {memberCount === 1 ? 'member' : 'members'}
     {/if}

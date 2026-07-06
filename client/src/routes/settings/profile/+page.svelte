@@ -27,6 +27,7 @@
   let customColor2 = $state('');
   let customColorDir = $state('135deg');
   let accentGradient = $state(false);
+  let forcedTheme = $state<'dark' | 'light' | ''>('');
   let showFriends = $state(true);
   let showSite = $state(false);
   let siteEnabled = $state(false);
@@ -260,6 +261,7 @@
           profileBgUrl = data.profile_bg;
         }
       }
+      forcedTheme = (data.forced_theme as 'dark' | 'light') || '';
       showFriends = !!data.show_friends;
       showSite = !!data.show_site;
       siteEnabled = !!data.site_enabled;
@@ -298,6 +300,7 @@
         custom_color: customColor,
         custom_color_2: accentGradient && customColor2 ? customColor2 : null,
         custom_color_dir: customColorDir,
+        forced_theme: forcedTheme || null,
         show_friends: showFriends, show_site: showSite,
         banner_height: bannerHeight, avatar_size: avatarSize
       });
@@ -776,6 +779,21 @@
             {/if}
           </div>
         {/if}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Profile theme</label>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:0.6rem">Force visitors to see your profile in a specific theme, regardless of their own setting.</p>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          {#each [{ val: '', label: 'Visitor\'s setting', icon: 'fa-solid fa-user' }, { val: 'dark', label: 'Always dark', icon: 'fa-solid fa-moon' }, { val: 'light', label: 'Always light', icon: 'fa-solid fa-sun' }] as opt}
+            <button
+              type="button"
+              class="btn btn-sm {forcedTheme === opt.val ? 'btn-primary' : 'btn-ghost'}"
+              onclick={() => forcedTheme = opt.val as typeof forcedTheme}
+            >
+              <i class={opt.icon}></i> {opt.label}
+            </button>
+          {/each}
+        </div>
       </div>
       <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem">
         <input id="show-friends" type="checkbox" bind:checked={showFriends} style="width:auto" />
