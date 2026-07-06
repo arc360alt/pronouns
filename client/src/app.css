@@ -83,8 +83,9 @@ a:hover { text-decoration: underline; }
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 .nav-links a {
   color: var(--text-muted);
@@ -831,7 +832,7 @@ tr:hover td { background: var(--bg-hover); }
 .home-card p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
 
 /* ── Mobile responsive ── */
-@media (max-width: 600px) {
+@media (max-width: 880px) {
   /* Navbar: hide desktop links, show hamburger */
   .nav-links-desktop { display: none; }
   .nav-hamburger { display: flex; }
