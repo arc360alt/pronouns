@@ -1,0 +1,35 @@
+[
+  {
+    "version": "1.4.0",
+    "date": "2026-07-06",
+    "title": "Feedback & Polish",
+    "changes": [
+      "Added feedback submission page — send bug reports and suggestions directly to admins",
+      "Added 5-minute cooldown on feedback to prevent spam",
+      "Fixed navbar overflow — items no longer wrap to a second line"
+    ]
+  },
+  {
+    "version": "1.3.0",
+    "date": "2026-06-25",
+    "title": "Custom Profile Backgrounds",
+    "changes": [
+      "Profiles can now have custom color, gradient, image, video, or YouTube video backgrounds",
+      "Accent color now supports gradients",
+      "Added brightness slider for profile backgrounds",
+      "Added option to hide banner and merge it with the background",
+      "Per-user 50 MB upload storage with usage meter in settings"
+    ]
+  },
+  {
+    "version": "1.2.0",
+    "date": "2026-06-20",
+    "title": "Markdown Bios & Profile Picture Cropping",
+    "changes": [
+      "Bio editor now supports Markdown with a formatting toolbar",
+      "Profile picture uploads now open a crop editor to choose what part of the image to show",
+      "Added link warning popup when clicking links in bios",
+      "Increased upload limits and added auto-compression for images"
+    ]
+  }
+]

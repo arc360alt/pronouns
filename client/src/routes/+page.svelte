@@ -1,5 +1,10 @@
 <script lang="ts">
   import { user } from '$lib/stores';
+  import updates from '$lib/updates.json';
+
+  function fmtDate(iso: string) {
+    return new Date(iso).toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
 </script>
 
 <svelte:head>
@@ -51,6 +56,29 @@
       <div class="home-card">
         <h3>Have fun :3</h3>
         <p>Have fun using our app, customize your profile to your hearts content!</p>
+      </div>
+    </div>
+
+    <div class="updates-section">
+      <h2 class="updates-heading">
+        <i class="fa-solid fa-clock-rotate-left"></i> Recent Updates
+      </h2>
+      <div class="updates-list">
+        {#each updates as update, i}
+          <div class="update-entry" class:update-latest={i === 0}>
+            <div class="update-meta">
+              <span class="update-version">{update.version}</span>
+              {#if i === 0}<span class="update-badge">Latest</span>{/if}
+              <span class="update-date">{fmtDate(update.date)}</span>
+            </div>
+            <p class="update-title">{update.title}</p>
+            <ul class="update-changes">
+              {#each update.changes as change}
+                <li>{change}</li>
+              {/each}
+            </ul>
+          </div>
+        {/each}
       </div>
     </div>
   </div>

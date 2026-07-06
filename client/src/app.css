@@ -831,6 +831,24 @@ tr:hover td { background: var(--bg-hover); }
 .home-card h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; }
 .home-card p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
 
+.updates-section { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+.updates-heading { font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem; color: var(--text-muted); }
+.updates-heading i { color: var(--accent); margin-right: 0.4rem; }
+.updates-list { display: flex; flex-direction: column; gap: 0; }
+.update-entry { padding: 1.25rem 0 1.25rem 1.25rem; border-left: 2px solid var(--border); position: relative; }
+.update-entry + .update-entry { border-top: none; }
+.update-latest { border-left-color: var(--accent); }
+.update-entry::before { content: ''; position: absolute; left: -5px; top: 1.6rem; width: 8px; height: 8px; border-radius: 50%; background: var(--border); border: 2px solid var(--bg); }
+.update-latest::before { background: var(--accent); border-color: var(--bg); }
+.update-meta { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem; flex-wrap: wrap; }
+.update-version { font-size: 13px; font-weight: 700; font-family: monospace; color: var(--text); }
+.update-badge { font-size: 11px; font-weight: 600; background: var(--accent-bg); color: var(--accent); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 999px; padding: 0.1rem 0.5rem; -webkit-text-fill-color: unset; color: var(--accent); }
+.update-date { font-size: 12px; color: var(--text-muted); }
+.update-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.5rem; }
+.update-changes { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.update-changes li { font-size: 13px; color: var(--text-muted); line-height: 1.5; padding-left: 1rem; position: relative; }
+.update-changes li::before { content: '–'; position: absolute; left: 0; color: var(--text-muted); }
+
 /* ── Mobile responsive ── */
 @media (max-width: 880px) {
   /* Navbar: hide desktop links, show hamburger */
