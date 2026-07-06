@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import { user, waitForUser } from '$lib/stores';
   import { api } from '$lib/api';
@@ -10,13 +10,38 @@
   let submitting = $state(false);
   let submitted = $state(false);
   let error = $state('');
+  let cooldown = $state(0); // seconds remaining
 
   let charsLeft = $derived(MAX_CHARS - message.length);
 
+  let timer: ReturnType<typeof setInterval> | null = null;
+
+  function startCountdown(seconds: number) {
+    cooldown = seconds;
+    if (timer) clearInterval(timer);
+    if (seconds <= 0) return;
+    timer = setInterval(() => {
+      cooldown = Math.max(0, cooldown - 1);
+      if (cooldown === 0 && timer) { clearInterval(timer); timer = null; }
+    }, 1000);
+  }
+
+  function fmtCooldown(s: number) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m > 0 ? `${m}:${String(sec).padStart(2, '0')}` : `${sec}s`;
+  }
+
   onMount(async () => {
     const me = await waitForUser();
-    if (!me) goto('/login');
+    if (!me) { goto('/login'); return; }
+    try {
+      const { remaining } = await api.get<{ remaining: number }>('/api/feedback/cooldown');
+      if (remaining > 0) startCountdown(remaining);
+    } catch { /* ignore, just don't show countdown */ }
   });
+
+  onDestroy(() => { if (timer) clearInterval(timer); });
 </script>
 
 <svelte:head><title>Send Feedback — pronouns</title></svelte:head>
@@ -35,7 +60,9 @@
         Thanks for taking the time — we'll review it soon.
       </p>
       <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-secondary" onclick={() => { submitted = false; message = ''; }}>Send another</button>
+        <button class="btn btn-secondary" disabled={cooldown > 0} onclick={() => { submitted = false; message = ''; }}>
+          {cooldown > 0 ? `Wait ${fmtCooldown(cooldown)}` : 'Send another'}
+        </button>
         <a href="/" class="btn btn-primary" style="color:#fff">Back to home</a>
       </div>
     </div>
@@ -71,13 +98,14 @@
 
       <button
         class="btn btn-primary"
-        disabled={submitting || !message.trim()}
+        disabled={submitting || !message.trim() || cooldown > 0}
         onclick={async () => {
           error = '';
           submitting = true;
           try {
             await api.post('/api/feedback', { message });
             submitted = true;
+            startCountdown(300);
           } catch (err) {
             error = err instanceof Error ? err.message : 'Failed to send feedback';
           } finally {
@@ -85,7 +113,13 @@
           }
         }}
       >
-        {submitting ? 'Sending…' : 'Send feedback'}
+        {#if submitting}
+          Sending…
+        {:else if cooldown > 0}
+          Wait {fmtCooldown(cooldown)}
+        {:else}
+          Send feedback
+        {/if}
       </button>
     </div>
   {/if}
