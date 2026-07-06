@@ -4,6 +4,7 @@ import type { User } from './types';
 export const user = writable<User | null>(null);
 export const theme = writable<'dark' | 'light'>('dark');
 export const notifUnread = writable<number>(0);
+export const forcedTheme = writable<'dark' | 'light' | null>(null);
 
 // Resolves to true once the layout has finished the /api/auth/me check.
 // Pages should await waitForUser() before running auth guards so they

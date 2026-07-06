@@ -1,7 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { onMount, onDestroy } from 'svelte';
-  import { user } from '$lib/stores';
+  import { user, theme, forcedTheme as forcedThemeStore } from '$lib/stores';
+  import { get } from 'svelte/store';
   import { api } from '$lib/api';
   import Modal from '$lib/components/Modal.svelte';
   import PixLoader from '$lib/components/PixLoader.svelte';
@@ -172,11 +173,13 @@
   let bgActive = $derived(!!(profile?.profile_bg && profile.profile_bg_type && profile.profile_bg_type !== 'none'));
   let hideBanner = $derived(bgActive && !!profile?.hide_banner_with_bg);
 
-  let originalTheme: string | null = null;
+  let hadForcedTheme = false;
 
   onDestroy(() => {
-    if (originalTheme !== null && typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', originalTheme);
+    if (hadForcedTheme && typeof document !== 'undefined') {
+      // Restore to whatever the user's actual preference currently is
+      document.documentElement.setAttribute('data-theme', get(theme));
+      forcedThemeStore.set(null);
     }
   });
 
@@ -186,8 +189,9 @@
       const data = await api.get<Profile>(`/api/users/${username}`);
       profile = data;
       if (data.forced_theme && typeof document !== 'undefined') {
-        originalTheme = document.documentElement.getAttribute('data-theme');
+        hadForcedTheme = true;
         document.documentElement.setAttribute('data-theme', data.forced_theme);
+        forcedThemeStore.set(data.forced_theme as 'dark' | 'light');
       }
       if (data.custom_color) {
         const c = data.custom_color;

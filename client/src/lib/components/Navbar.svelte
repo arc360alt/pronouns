@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { user, theme, notifUnread } from '$lib/stores';
+  import { user, theme, notifUnread, forcedTheme } from '$lib/stores';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import NotificationBell from '$lib/components/NotificationBell.svelte';
@@ -16,7 +16,10 @@
     const next = $theme === 'dark' ? 'light' : 'dark';
     theme.set(next);
     if (typeof localStorage !== 'undefined') localStorage.setItem('theme', next);
-    if (typeof document !== 'undefined') document.documentElement.setAttribute('data-theme', next);
+    // Don't touch data-theme while a profile's forced theme is active
+    if (!$forcedTheme && typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', next);
+    }
   }
 
   function logout() {
@@ -46,8 +49,11 @@
         {/if}
       {/if}
       {#if $user}<NotificationBell />{/if}
-      <button class="btn-theme" onclick={toggleTheme}>
-        {#if $theme === 'dark'}
+      <button class="btn-theme" onclick={toggleTheme} disabled={!!$forcedTheme}
+        title={$forcedTheme ? 'Theme locked by this profile' : undefined}>
+        {#if $forcedTheme}
+          <i class="fa-solid fa-lock"></i> Theme locked
+        {:else if $theme === 'dark'}
           <i class="fa-solid fa-sun"></i> Light mode
         {:else}
           <i class="fa-solid fa-moon"></i> Dark mode
@@ -88,8 +94,11 @@
       {/if}
       <div class="nav-drawer-divider"></div>
     {/if}
-    <button class="nav-drawer-item btn-theme" onclick={toggleTheme}>
-      {#if $theme === 'dark'}
+    <button class="nav-drawer-item btn-theme" onclick={toggleTheme} disabled={!!$forcedTheme}
+      title={$forcedTheme ? 'Theme locked by this profile' : undefined}>
+      {#if $forcedTheme}
+        <i class="fa-solid fa-lock"></i> Theme locked
+      {:else if $theme === 'dark'}
         <i class="fa-solid fa-sun"></i> Light mode
       {:else}
         <i class="fa-solid fa-moon"></i> Dark mode
