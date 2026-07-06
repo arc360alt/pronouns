@@ -12,11 +12,6 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const USER_STORAGE_LIMIT = 50 * 1024 * 1024; // 50 MB per user
 
-const TYPE_LIMITS: Record<string, number> = {
-  pfp:    2 * 1024 * 1024,  // 2 MB
-  banner: 3 * 1024 * 1024,  // 3 MB
-};
-
 /** Sum of all file sizes directly inside a user's upload folder. */
 function getUserFolderSize(userId: number): number {
   const dir = path.join(UPLOADS_DIR, String(userId));
@@ -48,7 +43,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: USER_STORAGE_LIMIT },
   fileFilter: (_req, file, cb) => {
     const ext  = path.extname(file.originalname).toLowerCase();
     const mime = file.mimetype;
@@ -79,7 +74,7 @@ router.post('/', requireAuth, (req, res) => {
     if (err) {
       const code = (err as NodeJS.ErrnoException & { code?: string }).code;
       if (code === 'LIMIT_FILE_SIZE') {
-        return res.status(413).json({ error: 'File exceeds the 10 MB processing cap.' });
+        return res.status(413).json({ error: 'This upload would exceed your 50 MB storage limit.' });
       }
       return res.status(400).json({ error: (err as Error).message || 'Upload failed' });
     }
@@ -91,15 +86,6 @@ router.post('/', requireAuth, (req, res) => {
     if (usedAfter > USER_STORAGE_LIMIT) {
       fs.unlinkSync(req.file.path);
       return res.status(413).json({ error: 'This upload would exceed your 50 MB storage limit.' });
-    }
-
-    // Enforce per-type size limits (pfp, banner)
-    const type = (req.query.type as string) ?? '';
-    const typeLimit = TYPE_LIMITS[type];
-    if (typeLimit && req.file.size > typeLimit) {
-      fs.unlinkSync(req.file.path);
-      const mb = (typeLimit / 1024 / 1024).toFixed(1);
-      return res.status(413).json({ error: `File too large. Maximum size for ${type} uploads is ${mb} MB.` });
     }
 
     return res.json({ url: `/uploads/${userId}/${req.file.filename}` });

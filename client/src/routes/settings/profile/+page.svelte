@@ -203,9 +203,7 @@
   let basicSaving = $state(false);
   let basicMsg = $state('');
   let picUploading = $state(false);
-  let picCompressing = $state(false);
   let bannerUploading = $state(false);
-  let bannerCompressing = $state(false);
   let cropFile = $state<File | null>(null);
   let picUploadInput = $state<HTMLInputElement | undefined>();
   let profileBgType = $state<'none' | 'color' | 'gradient' | 'image' | 'video' | 'youtube'>('none');
@@ -222,7 +220,6 @@
     const m = /(?:v=|youtu\.be\/|embed\/|shorts\/)([a-zA-Z0-9_-]{11})/.exec(url);
     return m ? m[1] : null;
   }
-  let profileBgCompressing = $state(false);
   let loading = $state(true);
   let itemMsg = $state('');
   let sizeToast = $state('');
@@ -313,48 +310,7 @@
     }
   }
 
-  const PFP_LIMIT    = 1.5 * 1024 * 1024; // 1.5 MB
-  const BANNER_LIMIT = 3   * 1024 * 1024; // 3 MB
-
   const isVideo = (url?: string | null) => !!(url && url.toLowerCase().endsWith('.mp4'));
-
-  // Progressively reduce JPEG quality (and optionally dimensions) until the
-  // file fits within maxBytes. Returns null if it still can't fit.
-  // GIFs and MP4s are never touched — canvas can't re-encode them.
-  function compressImage(file: File, maxBytes: number, maxDim = 2560): Promise<File | null> {
-    if (file.type === 'image/gif' || file.type === 'video/mp4') return Promise.resolve(null);
-    return new Promise(resolve => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        let w = img.naturalWidth, h = img.naturalHeight;
-        if (w > maxDim || h > maxDim) {
-          const r = Math.min(maxDim / w, maxDim / h);
-          w = Math.round(w * r); h = Math.round(h * r);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-        const outName = file.name.replace(/\.[^.]+$/, '.jpg');
-        const qualities = [0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25];
-        function tryNext(i: number) {
-          if (i >= qualities.length) { resolve(null); return; }
-          canvas.toBlob(blob => {
-            if (!blob) { resolve(null); return; }
-            if (blob.size <= maxBytes) {
-              resolve(new File([blob], outName, { type: 'image/jpeg' }));
-            } else {
-              tryNext(i + 1);
-            }
-          }, 'image/jpeg', qualities[i]);
-        }
-        tryNext(0);
-      };
-      img.src = url;
-    });
-  }
 
   async function uploadFile(file: File | Blob, type?: string): Promise<string> {
     const fd = new FormData();
@@ -368,16 +324,9 @@
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
     if (!checkStorage()) { if (picUploadInput) picUploadInput.value = ''; return; }
-    const isGif = file.type === 'image/gif';
 
-    if (isGif) {
-      // GIFs bypass the crop modal — canvas.toBlob() would strip animation.
-      // Upload directly if within limit; otherwise we can't compress in-browser.
-      if (file.size > PFP_LIMIT) {
-        showSizeToast(`This GIF is ${(file.size / 1024 / 1024).toFixed(1)} MB and exceeds the 1.5 MB limit. GIFs can't be compressed in the browser — try ezgif.com to reduce the file size first.`);
-        if (picUploadInput) picUploadInput.value = '';
-        return;
-      }
+    // GIFs and MP4s bypass the crop modal (canvas strips animation/video)
+    if (file.type === 'image/gif' || file.type === 'video/mp4') {
       picUploading = true;
       try {
         const url = await uploadFile(file, 'pfp');
@@ -393,41 +342,8 @@
       return;
     }
 
-    // MP4: bypass crop modal, upload directly
-    if (file.type === 'video/mp4') {
-      if (file.size > PFP_LIMIT) {
-        showSizeToast(`This video is ${(file.size / 1024 / 1024).toFixed(1)} MB and exceeds the 1.5 MB limit. Compress it first at freeconvert.com/video-compressor`);
-        if (picUploadInput) picUploadInput.value = '';
-        return;
-      }
-      picUploading = true;
-      try {
-        const url = await uploadFile(file, 'pfp');
-        await api.put('/api/profile/picture', { url });
-        profilePicture = url;
-        loadStorageUsage();
-      } catch (err) {
-        itemMsg = err instanceof Error ? err.message : 'Upload failed';
-      } finally {
-        picUploading = false;
-        if (picUploadInput) picUploadInput.value = '';
-      }
-      return;
-    }
-
-    // Non-GIF, non-MP4: open crop modal (compressing first if needed)
-    if (file.size <= PFP_LIMIT) { cropFile = file; return; }
-
-    picCompressing = true;
-    const compressed = await compressImage(file, PFP_LIMIT, 1024);
-    picCompressing = false;
-
-    if (!compressed) {
-      showSizeToast(`Image is too large even after compression (${(file.size / 1024 / 1024).toFixed(1)} MB → still over 1.5 MB). Try a smaller image.`);
-      if (picUploadInput) picUploadInput.value = '';
-      return;
-    }
-    cropFile = compressed;
+    // All other images go through the crop modal
+    cropFile = file;
   }
 
   async function onCropConfirm(blob: Blob) {
@@ -459,8 +375,6 @@
 
   function showMsg(m: string) { basicMsg = '✓ ' + m; setTimeout(() => basicMsg = '', 3000); }
 
-  const BG_LIMIT = 3 * 1024 * 1024;
-
   function computeProfileBg(): string | null {
     if (profileBgType === 'none') return null;
     if (profileBgType === 'color') return profileBgColor;
@@ -488,34 +402,6 @@
     const file = input.files?.[0];
     if (!file) return;
     if (!checkStorage()) { input.value = ''; return; }
-    if (file.type === 'video/mp4') {
-      if (file.size > BG_LIMIT) {
-        showSizeToast(`This video is ${(file.size / 1024 / 1024).toFixed(1)} MB (limit: 3 MB). Compress it at freeconvert.com/video-compressor`);
-        input.value = ''; return;
-      }
-    } else if (file.type === 'image/gif') {
-      if (file.size > BG_LIMIT) {
-        showSizeToast(`This GIF is ${(file.size / 1024 / 1024).toFixed(1)} MB (limit: 3 MB). Try ezgif.com`);
-        input.value = ''; return;
-      }
-    } else if (file.size > BG_LIMIT) {
-      profileBgCompressing = true;
-      const compressed = await compressImage(file, BG_LIMIT, 2560);
-      profileBgCompressing = false;
-      if (!compressed) {
-        showSizeToast(`Image too large even after compression. Try a smaller one.`);
-        input.value = ''; return;
-      }
-      profileBgUploading = true;
-      try {
-        const url = await uploadFile(compressed);
-        profileBgUrl = url;
-        profileBgType = 'image';
-        await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: 'image', profile_bg_brightness: profileBgBrightness, hide_banner_with_bg: hideBannerWithBg });
-      } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
-      finally { profileBgUploading = false; input.value = ''; }
-      return;
-    }
     profileBgUploading = true;
     try {
       const url = await uploadFile(file);
@@ -552,32 +438,9 @@
     if (!file) return;
     if (!checkStorage()) { input.value = ''; return; }
 
-    let toUpload: File = file;
-    if (file.size > BANNER_LIMIT) {
-      if (file.type === 'image/gif') {
-        showSizeToast(`This GIF is ${(file.size / 1024 / 1024).toFixed(1)} MB and exceeds the 3 MB limit. GIFs can't be compressed in the browser — try ezgif.com to reduce the file size first.`);
-        input.value = '';
-        return;
-      }
-      if (file.type === 'video/mp4') {
-        showSizeToast(`This video is ${(file.size / 1024 / 1024).toFixed(1)} MB and exceeds the 3 MB limit. Compress it first at freeconvert.com/video-compressor`);
-        input.value = '';
-        return;
-      }
-      bannerCompressing = true;
-      const compressed = await compressImage(file, BANNER_LIMIT, 2560);
-      bannerCompressing = false;
-      if (!compressed) {
-        showSizeToast(`Banner is too large even after compression (${(file.size / 1024 / 1024).toFixed(1)} MB → still over 3 MB). Try a smaller image.`);
-        input.value = '';
-        return;
-      }
-      toUpload = compressed;
-    }
-
     bannerUploading = true;
     try {
-      const url = await uploadFile(toUpload, 'banner');
+      const url = await uploadFile(file, 'banner');
       focalX = 50; focalY = 50; bannerPosition = '50% 50%';
       await api.put('/api/profile/banner', { url, position: bannerPosition });
       banner = url;
@@ -967,10 +830,10 @@
         <div style="width:72px;height:72px;border-radius:50%;background:var(--bg-input);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-muted)"><i class="fa-solid fa-user"></i></div>
       {/if}
       <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-        {picUploading ? 'Uploading…' : picCompressing ? 'Compressing…' : 'Upload image or video'}
-        <input bind:this={picUploadInput} type="file" accept="image/*,video/mp4" style="display:none" onchange={openPicPicker} disabled={picUploading || picCompressing} />
+        {picUploading ? 'Uploading…' : 'Upload image or video'}
+        <input bind:this={picUploadInput} type="file" accept="image/*,video/mp4" style="display:none" onchange={openPicPicker} disabled={picUploading} />
       </label>
-      <span style="font-size:11px;color:var(--text-muted)">Max 1.5 MB · jpg, png, gif, mp4</span>
+      <span style="font-size:11px;color:var(--text-muted)">jpg, png, gif, mp4 · counts toward your 50 MB storage</span>
     </div>
 
     <hr />
@@ -1003,10 +866,10 @@
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.25rem;align-items:center">
         <button class="btn btn-danger btn-sm" onclick={removeBanner}>Remove banner</button>
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-          {bannerUploading ? 'Uploading…' : bannerCompressing ? 'Compressing…' : 'Replace'}
-          <input type="file" accept="image/*,video/mp4" style="display:none" onchange={uploadBanner} disabled={bannerUploading || bannerCompressing} />
+          {bannerUploading ? 'Uploading…' : 'Replace'}
+          <input type="file" accept="image/*,video/mp4" style="display:none" onchange={uploadBanner} disabled={bannerUploading} />
         </label>
-        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB · jpg, png, gif, mp4</span>
+        <span style="font-size:11px;color:var(--text-muted)">jpg, png, gif, mp4 · counts toward your 50 MB storage</span>
       </div>
     {:else}
       <div style="height:160px;background:var(--bg-input);border:2px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;margin-bottom:0.75rem">
@@ -1014,10 +877,10 @@
       </div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-          {bannerUploading ? 'Uploading…' : bannerCompressing ? 'Compressing…' : 'Upload banner'}
-          <input type="file" accept="image/*,video/mp4" style="display:none" onchange={uploadBanner} disabled={bannerUploading || bannerCompressing} />
+          {bannerUploading ? 'Uploading…' : 'Upload banner'}
+          <input type="file" accept="image/*,video/mp4" style="display:none" onchange={uploadBanner} disabled={bannerUploading} />
         </label>
-        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB · jpg, png, gif, mp4</span>
+        <span style="font-size:11px;color:var(--text-muted)">jpg, png, gif, mp4 · counts toward your 50 MB storage</span>
       </div>
     {/if}
   </div>
@@ -1080,10 +943,10 @@
       {/if}
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
-          {profileBgUploading ? 'Uploading…' : profileBgCompressing ? 'Compressing…' : 'Upload image or GIF'}
-          <input type="file" accept="image/*" style="display:none" onchange={uploadProfileBg} disabled={profileBgUploading || profileBgCompressing} />
+          {profileBgUploading ? 'Uploading…' : 'Upload image or GIF'}
+          <input type="file" accept="image/*" style="display:none" onchange={uploadProfileBg} disabled={profileBgUploading} />
         </label>
-        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB</span>
+        <span style="font-size:11px;color:var(--text-muted)">jpg, png, gif · counts toward your 50 MB storage</span>
       </div>
 
     {:else if profileBgType === 'video'}
@@ -1100,7 +963,7 @@
           {profileBgUploading ? 'Uploading…' : 'Upload MP4'}
           <input type="file" accept="video/mp4" style="display:none" onchange={uploadProfileBg} disabled={profileBgUploading} />
         </label>
-        <span style="font-size:11px;color:var(--text-muted)">Max 3 MB · compress at freeconvert.com/video-compressor</span>
+        <span style="font-size:11px;color:var(--text-muted)">mp4 · counts toward your 50 MB storage</span>
       </div>
 
     {:else if profileBgType === 'youtube'}

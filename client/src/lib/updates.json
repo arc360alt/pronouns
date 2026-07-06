@@ -1,7 +1,17 @@
 [
   {
-    "version": "1.4.0",
+    "version": "1.4.1",
     "date": "2026-07-06",
+    "title": "Upload Limit Overhaul",
+    "changes": [
+      "Removed per-file size limits for profile pictures, banners, and backgrounds",
+      "The only limit is now the 50 MB total storage cap per account",
+      "Simplified upload flow, files go straight to upload without compression steps"
+    ]
+  },
+  {
+    "version": "1.4.0",
+    "date": "2026-07-05",
     "title": "Feedback & Polish",
     "changes": [
       "Added feedback submission page — send bug reports and suggestions directly to admins",
