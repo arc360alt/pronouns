@@ -2,8 +2,8 @@
   import '../app.css';
   import Navbar from '$lib/components/Navbar.svelte';
   import SiteBanner from '$lib/components/SiteBanner.svelte';
-  import { user, theme, userReady } from '$lib/stores';
-  import { onMount } from 'svelte';
+  import { user, theme, userReady, notifUnread } from '$lib/stores';
+  import { onMount, onDestroy } from 'svelte';
   import { api } from '$lib/api';
   import type { Snippet } from 'svelte';
   import type { User } from '$lib/types';
@@ -14,6 +14,14 @@
   let memberCount = $state<number | null>(null);
   let banner = $state<{ text: string; color: string; btn_text: string | null; btn_url: string | null } | null>(null);
   let bannerDismissed = $state(false);
+  let notifTimer: ReturnType<typeof setInterval> | null = null;
+
+  async function pollNotifCount() {
+    try {
+      const { count } = await api.get<{ count: number }>('/api/notifications/unread-count');
+      notifUnread.set(count);
+    } catch {}
+  }
 
   onMount(async () => {
     const saved = (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
@@ -27,6 +35,8 @@
       try {
         const me = await api.get<User>('/api/auth/me');
         user.set(me);
+        pollNotifCount();
+        notifTimer = setInterval(pollNotifCount, 60_000);
       } catch {
         localStorage.removeItem('token');
       }
@@ -42,6 +52,8 @@
       if (!bannerDismissed) banner = b;
     } catch {}
   });
+
+  onDestroy(() => { if (notifTimer) clearInterval(notifTimer); });
 </script>
 
 {#if banner}

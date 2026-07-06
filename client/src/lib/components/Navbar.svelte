@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { user, theme } from '$lib/stores';
+  import { user, theme, notifUnread } from '$lib/stores';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import NotificationBell from '$lib/components/NotificationBell.svelte';
@@ -79,6 +79,10 @@
       <a href="/settings/site"><i class="fa-solid fa-globe"></i> My Site</a>
       <a href="/settings"><i class="fa-solid fa-gear"></i> Settings</a>
       <a href="/feedback"><i class="fa-solid fa-comment-dots"></i> Feedback</a>
+      <a href="/notifications" style="display:flex;align-items:center;gap:0.5rem">
+        <i class="fa-solid fa-bell"></i> Notifications
+        {#if $notifUnread > 0}<span style="background:var(--accent);color:#fff;border-radius:999px;padding:0 6px;font-size:11px;font-weight:700">{$notifUnread > 99 ? '99+' : $notifUnread}</span>{/if}
+      </a>
       {#if $user.is_admin}
         <a href="/admin"><i class="fa-solid fa-shield-halved"></i> Admin</a>
       {/if}
