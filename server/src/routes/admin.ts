@@ -109,12 +109,25 @@ router.get('/badges', requireAdmin, (_req, res) => {
 
 router.post('/users/:id/badges/:badgeId', requireAdmin, (req, res) => {
   const { id, badgeId } = req.params;
-  if (!BADGE_DEFS.some(d => d.id === badgeId)) return res.status(404).json({ error: 'Unknown badge' });
+  const badgeDef = BADGE_DEFS.find(d => d.id === badgeId) as { id: string; name: string; description: string } | undefined;
+  if (!badgeDef) return res.status(404).json({ error: 'Unknown badge' });
+
+  const existing = db.prepare('SELECT 1 FROM user_badges WHERE user_id = ? AND badge_id = ?').get(id, badgeId);
   db.prepare(`
     INSERT INTO user_badges (user_id, badge_id, awarded_by, visible, sort_order)
     VALUES (?, ?, ?, 1, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM user_badges WHERE user_id = ?))
     ON CONFLICT(user_id, badge_id) DO UPDATE SET awarded_by = excluded.awarded_by
   `).run(id, badgeId, req.user!.id, id);
+
+  if (!existing) {
+    createNotification(parseInt(id), 'message',
+      `You earned the "${badgeDef.name}" badge!`,
+      badgeDef.description
+        ? `${badgeDef.description}`
+        : `The "${badgeDef.name}" badge has been added to your profile.`
+    );
+  }
+
   return res.json({ ok: true });
 });
 
@@ -170,11 +183,21 @@ router.put('/feedback/:id', requireAdmin, (req, res) => {
   if (!['unread', 'read', 'resolved'].includes(status))
     return res.status(400).json({ error: 'Invalid status' });
 
-  const result = db.prepare(
-    'UPDATE feedback SET status = ?, admin_note = ? WHERE id = ?'
-  ).run(status, admin_note || null, req.params.id);
+  const row = db.prepare('SELECT user_id, message, status FROM feedback WHERE id = ?')
+    .get(req.params.id) as { user_id: number; message: string; status: string } | undefined;
+  if (!row) return res.status(404).json({ error: 'Feedback not found' });
 
-  if (result.changes === 0) return res.status(404).json({ error: 'Feedback not found' });
+  db.prepare('UPDATE feedback SET status = ?, admin_note = ? WHERE id = ?')
+    .run(status, admin_note || null, req.params.id);
+
+  if (status === 'resolved' && row.status !== 'resolved') {
+    const snippet = row.message.length > 80 ? row.message.slice(0, 80).trimEnd() + '…' : row.message;
+    createNotification(row.user_id, 'feedback_reply',
+      'Your feedback has been resolved',
+      `Your feedback has been marked as resolved.\n\n"${snippet}"`
+    );
+  }
+
   return res.json({ message: 'Feedback updated' });
 });
 
