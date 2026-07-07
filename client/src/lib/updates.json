@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.6.0",
+    "date": "2026-07-07",
+    "title": "Icon Links, Section Blur & Tabbed Editor",
+    "changes": [
+      "Links can now display a Font Awesome icon — choose from brands (GitHub, Discord, Instagram, Steam, Bluesky...) or solid icons, with three display modes: text only, icon only, or icon + text",
+      "Icon size is adjustable per link via a dedicated slider when using icon or icon+text mode",
+      "Added optional frosted glass blur behind profile section cards — toggle it on and control the intensity in appearance settings",
+      "Added Discord, Twitter/X, and other platform embed support — sharing a profile link now shows a rich preview with name, bio, and profile picture",
+      "Profile editor reorganised into four tabs: Profile, Appearance, Content, and Social — no more scrolling through one long page"
+    ]
+  },
+  {
     "version": "1.5.0",
     "date": "2026-07-06",
     "title": "Notifications, Forced Themes & More",

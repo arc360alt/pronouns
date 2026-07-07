@@ -160,6 +160,8 @@ addCol('profiles', 'custom_color_dir', "TEXT NOT NULL DEFAULT '135deg'");
 addCol('profiles', 'forced_theme', 'TEXT DEFAULT NULL');
 addCol('users', 'google_id', 'TEXT');
 addCol('users', 'username_changed_at', 'TEXT');
+addCol('profiles', 'section_blur', 'INTEGER DEFAULT 0');
+addCol('profiles', 'section_blur_amount', 'REAL DEFAULT 8');
 addCol('profile_links', 'link_icon', 'TEXT DEFAULT NULL');
 addCol('profile_links', 'link_icon_mode', "TEXT NOT NULL DEFAULT 'text'");
 addCol('profile_links', 'link_icon_size', 'REAL DEFAULT 1.5');
@@ -264,7 +266,7 @@ export function getFullProfile(userId: number) {
            p.profile_picture, p.banner, p.banner_position, p.custom_color, p.show_friends,
            p.location, p.occupation, p.birthday, p.website, p.timezone,
            p.banner_height, p.avatar_size, p.show_site, p.section_order,
-           p.profile_bg, p.profile_bg_type, p.profile_bg_brightness, p.hide_banner_with_bg, p.custom_color_2, p.custom_color_dir, p.forced_theme,
+           p.profile_bg, p.profile_bg_type, p.profile_bg_brightness, p.hide_banner_with_bg, p.custom_color_2, p.custom_color_dir, p.forced_theme, p.section_blur, p.section_blur_amount,
            CASE WHEN s.enabled = 1 THEN 1 ELSE 0 END AS site_enabled
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id

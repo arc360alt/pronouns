@@ -96,6 +96,8 @@ export interface Profile {
   profile_bg_brightness: number;
   hide_banner_with_bg: boolean | number;
   forced_theme: 'dark' | 'light' | null;
+  section_blur: boolean | number;
+  section_blur_amount: number;
   show_friends: boolean | number;
   show_site: boolean | number;
   site_enabled: boolean | number;

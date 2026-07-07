@@ -266,8 +266,11 @@
   </div>
 {:else}
   <div
-    class={profile.profile_bg_type && profile.profile_bg_type !== 'none' ? 'has-profile-bg' : ''}
-    style={customStyle}
+    class={[
+      profile.profile_bg_type && profile.profile_bg_type !== 'none' ? 'has-profile-bg' : '',
+      profile.section_blur && profile.profile_bg_type !== 'none' ? 'has-section-blur' : '',
+    ].join(' ')}
+    style="{customStyle}{profile.section_blur && profile.profile_bg_type !== 'none' ? `--section-blur:${profile.section_blur_amount ?? 8}px;` : ''}"
   >
     <!-- Profile background layer -->
     {#if profile.profile_bg && profile.profile_bg_type !== 'none'}

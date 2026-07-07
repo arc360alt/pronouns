@@ -563,8 +563,7 @@ button.pref-btn:hover { opacity: 1; background: none; }
   background: #000;
 }
 
-/* Cards become semi-transparent when a profile bg is set.
-   No backdrop-filter — it creates stacking contexts that break fixed bg layers. */
+/* Cards become semi-transparent when a profile bg is set. */
 .has-profile-bg .card,
 .has-profile-bg .profile-section {
   background: color-mix(in srgb, var(--bg-card) 93%, transparent);
@@ -583,6 +582,17 @@ button.pref-btn:hover { opacity: 1; background: none; }
   background: color-mix(in srgb, var(--bg-card) 80%, transparent);
   border-radius: var(--radius);
   padding: 0.35rem 1rem;
+}
+/* Optional frosted-glass blur behind sections */
+.has-section-blur .card,
+.has-section-blur .profile-section {
+  backdrop-filter: blur(var(--section-blur, 8px));
+  -webkit-backdrop-filter: blur(var(--section-blur, 8px));
+}
+.has-section-blur .profile-identity,
+.has-section-blur .profile-divider {
+  backdrop-filter: blur(var(--section-blur, 8px));
+  -webkit-backdrop-filter: blur(var(--section-blur, 8px));
 }
 /* Keep old class names as no-ops so old CSS in profile page doesn't break */
 .profile-bg-fixed {

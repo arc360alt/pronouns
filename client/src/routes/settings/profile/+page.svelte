@@ -219,6 +219,8 @@
   let profileBgUrl = $state('');
   let profileBgBrightness = $state(0.5);
   let hideBannerWithBg = $state(false);
+  let sectionBlur = $state(false);
+  let sectionBlurAmount = $state(8);
   let profileBgUploading = $state(false);
 
   function extractYouTubeId(url: string): string | null {
@@ -256,6 +258,8 @@
       profileBgType = (data.profile_bg_type as any) || 'none';
       profileBgBrightness = data.profile_bg_brightness ?? 0.5;
       hideBannerWithBg = !!data.hide_banner_with_bg;
+      sectionBlur = !!data.section_blur;
+      sectionBlurAmount = data.section_blur_amount ?? 8;
       if (data.profile_bg) {
         if (profileBgType === 'color') {
           profileBgColor = data.profile_bg;
@@ -398,6 +402,8 @@
         profile_bg_type: profileBgType,
         profile_bg_brightness: profileBgBrightness,
         hide_banner_with_bg: hideBannerWithBg,
+        section_blur: sectionBlur,
+        section_blur_amount: sectionBlurAmount,
       });
       showMsg('Background saved');
     } catch (err) {
@@ -415,7 +421,7 @@
       const url = await uploadFile(file);
       profileBgUrl = url;
       profileBgType = file.type === 'video/mp4' ? 'video' : 'image';
-      await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType, profile_bg_brightness: profileBgBrightness, hide_banner_with_bg: hideBannerWithBg });
+      await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType, profile_bg_brightness: profileBgBrightness, hide_banner_with_bg: hideBannerWithBg, section_blur: sectionBlur, section_blur_amount: sectionBlurAmount });
       loadStorageUsage();
     } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
     finally { profileBgUploading = false; input.value = ''; }
@@ -704,6 +710,8 @@
     badgeDragId = null;
     await api.put('/api/profile/badges/order', { order: badges.map(b => b.id) });
   }
+
+  let activeTab = $state<'profile' | 'appearance' | 'content' | 'social'>('profile');
 </script>
 
 <svelte:head><title>Edit Profile — pronouns</title></svelte:head>
@@ -712,18 +720,36 @@
   <div class="loading"><PixLoader size={48} /></div>
 {:else}
 <div class="container" style="max-width:640px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
     <h1 class="page-title" style="margin-bottom:0">Edit Profile</h1>
     {#if $user}
       <a href="/@{$user.username}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> View profile</a>
     {/if}
   </div>
 
+  <!-- ── Tab nav ── -->
+  <div class="editor-tabs">
+    <button class="editor-tab" class:active={activeTab === 'profile'} onclick={() => activeTab = 'profile'}>
+      <i class="fa-solid fa-user"></i><span>Profile</span>
+    </button>
+    <button class="editor-tab" class:active={activeTab === 'appearance'} onclick={() => activeTab = 'appearance'}>
+      <i class="fa-solid fa-palette"></i><span>Appearance</span>
+    </button>
+    <button class="editor-tab" class:active={activeTab === 'content'} onclick={() => activeTab = 'content'}>
+      <i class="fa-solid fa-layer-group"></i><span>Content</span>
+    </button>
+    <button class="editor-tab" class:active={activeTab === 'social'} onclick={() => activeTab = 'social'}>
+      <i class="fa-solid fa-users"></i><span>Social</span>
+    </button>
+  </div>
+
   {#if itemMsg}
     <p class="msg-error" style="margin-bottom:1rem">{itemMsg}</p>
   {/if}
 
-  <!-- ── Basic Info ── -->
+  <!-- ════════════════ PROFILE TAB ════════════════ -->
+  {#if activeTab === 'profile'}
+
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Basic Info</p>
     <form onsubmit={saveBasic}>
@@ -758,14 +784,11 @@
         </div>
       </div>
       <div class="form-group" style="grid-column:1/-1">
-        <label class="form-label" for="tz">My timezone (shows a live clock on your profile)</label>
+        <label class="form-label" for="tz">Timezone (shows a live clock on your profile)</label>
         <div style="display:flex;gap:0.5rem">
-          <input id="tz" type="text" list="tz-list" bind:value={timezone}
-            placeholder="e.g. America/Chicago" style="flex:1" />
+          <input id="tz" type="text" list="tz-list" bind:value={timezone} placeholder="e.g. America/Chicago" style="flex:1" />
           <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap"
-            onclick={() => timezone = Intl.DateTimeFormat().resolvedOptions().timeZone}>
-            Detect mine
-          </button>
+            onclick={() => timezone = Intl.DateTimeFormat().resolvedOptions().timeZone}>Detect mine</button>
           {#if timezone}
             <button type="button" class="btn btn-ghost btn-sm" onclick={() => timezone = ''}>Clear</button>
           {/if}
@@ -775,100 +798,108 @@
             Preview: {new Intl.DateTimeFormat('en', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true, timeZone: timezone }).format(new Date())}
           </small>
         {/if}
-        <datalist id="tz-list">
-          {#each TIMEZONES as tz}<option value={tz}></option>{/each}
-        </datalist>
+        <datalist id="tz-list">{#each TIMEZONES as tz}<option value={tz}></option>{/each}</datalist>
       </div>
-
       <div class="form-group">
         <label class="form-label" for="bio">Bio</label>
         <MarkdownEditor id="bio" bind:value={bio} rows={5} placeholder="Tell people about yourself… (supports **bold**, *italic*, # headings, - lists, [links](url), and more)" />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="custom-color">Profile accent color</label>
-        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem">
-          <input id="custom-color" type="color" bind:value={customColor} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
-          <input type="text" bind:value={customColor} placeholder="#e07a27" style="flex:1" />
-          {#if customColor}
-            <button type="button" class="btn btn-ghost btn-sm" onclick={() => { customColor = ''; accentGradient = false; customColor2 = ''; }}>Reset</button>
-          {/if}
-        </div>
-        <label style="display:flex;align-items:center;gap:0.5rem;font-size:13px;cursor:pointer;margin-bottom:0.5rem">
-          <input type="checkbox" bind:checked={accentGradient} style="width:auto" />
-          Use gradient accent
-        </label>
-        {#if accentGradient}
-          <div style="display:flex;flex-direction:column;gap:0.5rem">
-            <div style="display:flex;align-items:center;gap:0.75rem">
-              <input type="color" bind:value={customColor2} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
-              <input type="text" bind:value={customColor2} placeholder="End color e.g. #c96a1c" style="flex:1" />
-            </div>
-            <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
-              {#each ['45deg','90deg','135deg','180deg','225deg','270deg'] as d}
-                <button type="button" class="btn btn-sm {customColorDir === d ? 'btn-primary' : 'btn-ghost'}"
-                  style="font-size:11px;padding:2px 8px" onclick={() => customColorDir = d}>{d}</button>
-              {/each}
-            </div>
-            {#if customColor && customColor2}
-              <div style="height:28px;border-radius:var(--radius);background:{accentBgPreview}"></div>
-            {/if}
-          </div>
-        {/if}
-      </div>
-      <div class="form-group">
-        <label class="form-label">Profile theme</label>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:0.6rem">Force visitors to see your profile in a specific theme, regardless of their own setting.</p>
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-          {#each [{ val: '', label: 'Visitor\'s setting', icon: 'fa-solid fa-user' }, { val: 'dark', label: 'Always dark', icon: 'fa-solid fa-moon' }, { val: 'light', label: 'Always light', icon: 'fa-solid fa-sun' }] as opt}
-            <button
-              type="button"
-              class="btn btn-sm {forcedTheme === opt.val ? 'btn-primary' : 'btn-ghost'}"
-              onclick={() => forcedTheme = opt.val as typeof forcedTheme}
-            >
-              <i class={opt.icon}></i> {opt.label}
-            </button>
-          {/each}
-        </div>
-      </div>
-      <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem">
-        <input id="show-friends" type="checkbox" bind:checked={showFriends} style="width:auto" />
-        <label for="show-friends" style="cursor:pointer;font-size:14px">Show friends on my profile</label>
-      </div>
-      <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem">
-        <input id="show-site" type="checkbox" bind:checked={showSite} disabled={!siteEnabled} style="width:auto" />
-        <label for="show-site" style="cursor:pointer;font-size:14px;{!siteEnabled ? 'opacity:0.5' : ''}">
-          Show my personal site link on my profile
-          {#if !siteEnabled}<span style="font-size:12px;color:var(--text-muted)"> — enable your site in <a href="/settings/site" style="color:var(--accent)">My Site</a> first</span>{/if}
-        </label>
       </div>
       {#if basicMsg}
         <p class={basicMsg.startsWith('✓') ? 'msg-success' : 'msg-error'}>{basicMsg}</p>
       {/if}
       <button type="submit" class="btn btn-primary" disabled={basicSaving}>
-        {basicSaving ? 'Saving…' : 'Save info'}
+        {basicSaving ? 'Saving…' : 'Save profile'}
       </button>
     </form>
   </div>
 
-  <!-- ── Appearance ── -->
   <div class="card" style="margin-bottom:1rem">
-    <!-- Storage quota bar -->
-    {#if storageUsed !== null}
-      <div style="margin-bottom:1.25rem;padding:0.75rem;background:var(--bg-input);border-radius:var(--radius);border:1px solid var(--border)">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">
-          <span style="font-size:13px;color:var(--text-muted)"><i class="fa-solid fa-hard-drive"></i> Upload storage</span>
-          <span style="font-size:13px;font-weight:600;color:{storageUsed >= storageLimitBytes ? 'var(--danger)' : 'var(--text)'}">
-            {formatBytes(storageUsed)} <span style="font-weight:400;color:var(--text-muted)">/ 50 MB</span>
-          </span>
-        </div>
-        <div style="height:7px;background:var(--border);border-radius:999px;overflow:hidden">
-          <div style="height:100%;width:{Math.min(100, storageUsed / storageLimitBytes * 100).toFixed(1)}%;background:{storageUsed >= storageLimitBytes ? 'var(--danger)' : storageUsed / storageLimitBytes > 0.8 ? 'var(--accent)' : 'var(--success)'};border-radius:999px;transition:width 0.3s"></div>
-        </div>
-        {#if storageUsed >= storageLimitBytes}
-          <p style="font-size:12px;color:var(--danger);margin-top:0.4rem">Limit reached — delete some uploaded files to free space.</p>
+    <p class="section-title">Accent Color</p>
+    <div class="form-group">
+      <label class="form-label" for="custom-color">Profile accent color</label>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem">
+        <input id="custom-color" type="color" bind:value={customColor} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
+        <input type="text" bind:value={customColor} placeholder="#e07a27" style="flex:1" />
+        {#if customColor}
+          <button type="button" class="btn btn-ghost btn-sm" onclick={() => { customColor = ''; accentGradient = false; customColor2 = ''; }}>Reset</button>
         {/if}
       </div>
+      <label style="display:flex;align-items:center;gap:0.5rem;font-size:13px;cursor:pointer;margin-bottom:0.5rem">
+        <input type="checkbox" bind:checked={accentGradient} style="width:auto" />
+        Use gradient accent
+      </label>
+      {#if accentGradient}
+        <div style="display:flex;flex-direction:column;gap:0.5rem">
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            <input type="color" bind:value={customColor2} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
+            <input type="text" bind:value={customColor2} placeholder="End color e.g. #c96a1c" style="flex:1" />
+          </div>
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap">
+            {#each ['45deg','90deg','135deg','180deg','225deg','270deg'] as d}
+              <button type="button" class="btn btn-sm {customColorDir === d ? 'btn-primary' : 'btn-ghost'}"
+                style="font-size:11px;padding:2px 8px" onclick={() => customColorDir = d}>{d}</button>
+            {/each}
+          </div>
+          {#if customColor && customColor2}
+            <div style="height:28px;border-radius:var(--radius);background:{accentBgPreview}"></div>
+          {/if}
+        </div>
+      {/if}
+    </div>
+    <div class="form-group">
+      <label class="form-label">Profile theme</label>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:0.6rem">Force visitors to see your profile in a specific theme.</p>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        {#each [{ val: '', label: "Visitor's setting", icon: 'fa-solid fa-user' }, { val: 'dark', label: 'Always dark', icon: 'fa-solid fa-moon' }, { val: 'light', label: 'Always light', icon: 'fa-solid fa-sun' }] as opt}
+          <button type="button" class="btn btn-sm {forcedTheme === opt.val ? 'btn-primary' : 'btn-ghost'}"
+            onclick={() => forcedTheme = opt.val as typeof forcedTheme}>
+            <i class={opt.icon}></i> {opt.label}
+          </button>
+        {/each}
+      </div>
+    </div>
+    <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem">
+      <input id="show-friends" type="checkbox" bind:checked={showFriends} style="width:auto" />
+      <label for="show-friends" style="cursor:pointer;font-size:14px">Show friends on my profile</label>
+    </div>
+    <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem">
+      <input id="show-site" type="checkbox" bind:checked={showSite} disabled={!siteEnabled} style="width:auto" />
+      <label for="show-site" style="cursor:pointer;font-size:14px;{!siteEnabled ? 'opacity:0.5' : ''}">
+        Show my personal site link on my profile
+        {#if !siteEnabled}<span style="font-size:12px;color:var(--text-muted)"> — enable in <a href="/settings/site" style="color:var(--accent)">My Site</a> first</span>{/if}
+      </label>
+    </div>
+    {#if basicMsg}
+      <p class={basicMsg.startsWith('✓') ? 'msg-success' : 'msg-error'}>{basicMsg}</p>
     {/if}
+    <button type="button" class="btn btn-primary" onclick={saveBasic} disabled={basicSaving}>
+      {basicSaving ? 'Saving…' : 'Save'}
+    </button>
+  </div>
+
+  <!-- ════════════════ APPEARANCE TAB ════════════════ -->
+  {:else if activeTab === 'appearance'}
+
+  <!-- Storage quota -->
+  {#if storageUsed !== null}
+    <div style="margin-bottom:1rem;padding:0.75rem;background:var(--bg-input);border-radius:var(--radius);border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">
+        <span style="font-size:13px;color:var(--text-muted)"><i class="fa-solid fa-hard-drive"></i> Upload storage</span>
+        <span style="font-size:13px;font-weight:600;color:{storageUsed >= storageLimitBytes ? 'var(--danger)' : 'var(--text)'}">
+          {formatBytes(storageUsed)} <span style="font-weight:400;color:var(--text-muted)">/ 50 MB</span>
+        </span>
+      </div>
+      <div style="height:7px;background:var(--border);border-radius:999px;overflow:hidden">
+        <div style="height:100%;width:{Math.min(100, storageUsed / storageLimitBytes * 100).toFixed(1)}%;background:{storageUsed >= storageLimitBytes ? 'var(--danger)' : storageUsed / storageLimitBytes > 0.8 ? 'var(--accent)' : 'var(--success)'};border-radius:999px;transition:width 0.3s"></div>
+      </div>
+      {#if storageUsed >= storageLimitBytes}
+        <p style="font-size:12px;color:var(--danger);margin-top:0.4rem">Limit reached — delete some uploaded files to free space.</p>
+      {/if}
+    </div>
+  {/if}
+
+  <!-- Profile Picture -->
+  <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Profile Picture</p>
     <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
       {#if profilePicture}
@@ -888,32 +919,27 @@
       </label>
       <span style="font-size:11px;color:var(--text-muted)">jpg, png, gif, mp4 · counts toward your 50 MB storage</span>
     </div>
+  </div>
 
-    <hr />
+  <!-- Banner -->
+  <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Banner</p>
     {#if banner}
       <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
       {#if isVideo(banner)}
-        <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
         <div class="banner-editor" style="height:{bannerHeight}px;margin-bottom:0.5rem" onclick={handleFocalClick}>
           <video src={banner} autoplay loop muted playsinline
             style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:{bannerPosition};pointer-events:none"></video>
           <div class="focal-indicator" style="left:{focalX}%;top:{focalY}%"></div>
-          <div style="position:absolute;bottom:8px;left:8px;font-size:11px;background:rgba(0,0,0,0.65);color:#fff;padding:3px 7px;border-radius:3px;pointer-events:none">
-            Click to set focal point — this part stays visible when cropped
-          </div>
+          <div style="position:absolute;bottom:8px;left:8px;font-size:11px;background:rgba(0,0,0,0.65);color:#fff;padding:3px 7px;border-radius:3px;pointer-events:none">Click to set focal point</div>
         </div>
       {:else}
         <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-        <div
-          class="banner-editor"
+        <div class="banner-editor"
           style="height:{bannerHeight}px;background-image:url({banner});background-position:{bannerPosition};margin-bottom:0.5rem"
-          onclick={handleFocalClick}
-        >
+          onclick={handleFocalClick}>
           <div class="focal-indicator" style="left:{focalX}%;top:{focalY}%"></div>
-          <div style="position:absolute;bottom:8px;left:8px;font-size:11px;background:rgba(0,0,0,0.65);color:#fff;padding:3px 7px;border-radius:3px;pointer-events:none">
-            Click to set focal point — this part stays visible when cropped
-          </div>
+          <div style="position:absolute;bottom:8px;left:8px;font-size:11px;background:rgba(0,0,0,0.65);color:#fff;padding:3px 7px;border-radius:3px;pointer-events:none">Click to set focal point</div>
         </div>
       {/if}
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.25rem;align-items:center">
@@ -925,9 +951,7 @@
         <span style="font-size:11px;color:var(--text-muted)">jpg, png, gif, mp4 · counts toward your 50 MB storage</span>
       </div>
     {:else}
-      <div style="height:160px;background:var(--bg-input);border:2px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;margin-bottom:0.75rem">
-        No banner set
-      </div>
+      <div style="height:160px;background:var(--bg-input);border:2px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;margin-bottom:0.75rem">No banner set</div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
           {bannerUploading ? 'Uploading…' : 'Upload banner'}
@@ -938,24 +962,18 @@
     {/if}
   </div>
 
-  <!-- ── Profile Background ── -->
+  <!-- Profile Background -->
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Profile Background</p>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
-      Shown behind your entire profile page. Cards become slightly transparent to let it show through.
-    </p>
-
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Shown behind your entire profile. Cards become slightly transparent to let it show through.</p>
     <div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:1rem">
       {#each ([['none','None','fa-ban'],['color','Color','fa-palette'],['gradient','Gradient','fa-fill-drip'],['image','Image / GIF','fa-image'],['video','Video','fa-film'],['youtube','YouTube','fa-brands fa-youtube']] as const) as [val, label, icon]}
-        <button type="button"
-          class="btn btn-sm {profileBgType === val ? 'btn-primary' : 'btn-secondary'}"
-          style="font-size:12px"
+        <button type="button" class="btn btn-sm {profileBgType === val ? 'btn-primary' : 'btn-secondary'}" style="font-size:12px"
           onclick={() => { profileBgType = val as typeof profileBgType; if (val === 'none') saveBg(); }}>
           <i class="{icon.startsWith('fa-brands') ? icon : 'fa-solid ' + icon}"></i> {label}
         </button>
       {/each}
     </div>
-
     {#if profileBgType === 'color'}
       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
         <input type="color" bind:value={profileBgColor} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
@@ -963,7 +981,6 @@
       </div>
       <div style="height:40px;border-radius:var(--radius);margin-bottom:0.75rem;{bgPreviewStyle}"></div>
       <button type="button" class="btn btn-primary btn-sm" onclick={saveBg}>Save background</button>
-
     {:else if profileBgType === 'gradient'}
       <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:0.75rem">
         <div style="display:flex;align-items:center;gap:0.75rem">
@@ -985,7 +1002,6 @@
         <div style="height:40px;border-radius:var(--radius);{bgPreviewStyle}"></div>
       </div>
       <button type="button" class="btn btn-primary btn-sm" onclick={saveBg}>Save background</button>
-
     {:else if profileBgType === 'image'}
       {#if profileBgUrl}
         <div style="height:100px;border-radius:var(--radius);background-image:url({profileBgUrl});background-size:cover;background-position:center;margin-bottom:0.75rem;position:relative">
@@ -1001,7 +1017,6 @@
         </label>
         <span style="font-size:11px;color:var(--text-muted)">jpg, png, gif · counts toward your 50 MB storage</span>
       </div>
-
     {:else if profileBgType === 'video'}
       {#if profileBgUrl}
         <div style="height:100px;border-radius:var(--radius);overflow:hidden;margin-bottom:0.75rem;position:relative">
@@ -1018,7 +1033,6 @@
         </label>
         <span style="font-size:11px;color:var(--text-muted)">mp4 · counts toward your 50 MB storage</span>
       </div>
-
     {:else if profileBgType === 'youtube'}
       <div class="form-group" style="margin-bottom:0.75rem">
         <label class="form-label" for="bg-yt-url">YouTube video URL</label>
@@ -1031,37 +1045,53 @@
         {/if}
       </div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem">
-        <i class="fa-solid fa-circle-info"></i> The video will autoplay muted. Some videos may not be embeddable — try a different one if it doesn't show.
+        <i class="fa-solid fa-circle-info"></i> The video will autoplay muted. Some videos may not be embeddable.
       </p>
-      <button type="button" class="btn btn-primary btn-sm" onclick={saveBg}
-        disabled={!extractYouTubeId(profileBgUrl)}>Save background</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick={saveBg} disabled={!extractYouTubeId(profileBgUrl)}>Save background</button>
     {/if}
-
-    <!-- Merge banner option + brightness — shown for all non-none types -->
     {#if profileBgType !== 'none'}
       <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border)">
         <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:13px;cursor:pointer;margin-bottom:0.75rem">
-          <input type="checkbox" bind:checked={hideBannerWithBg} style="width:auto;margin-top:2px;flex-shrink:0"
-            onchange={saveBg} />
+          <input type="checkbox" bind:checked={hideBannerWithBg} style="width:auto;margin-top:2px;flex-shrink:0" onchange={saveBg} />
           <span>
             <strong style="display:block;margin-bottom:0.15rem">Hide banner &amp; merge with background</strong>
-            <span style="color:var(--text-muted);font-size:12px">Your banner will be hidden so the background fills the page seamlessly from top to bottom.</span>
+            <span style="color:var(--text-muted);font-size:12px">Your banner will be hidden so the background fills the page seamlessly.</span>
           </span>
         </label>
         <label class="form-label" style="display:flex;justify-content:space-between">
-          <span>Background brightness</span>
-          <strong>{Math.round(profileBgBrightness * 100)}%</strong>
+          <span>Background brightness</span><strong>{Math.round(profileBgBrightness * 100)}%</strong>
         </label>
         <input type="range" min="0" max="1" step="0.05" bind:value={profileBgBrightness}
           style="width:100%;accent-color:var(--accent);margin-top:0.35rem" />
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
           <span>0% (dark)</span><span>50% (default)</span><span>100% (full)</span>
         </div>
+        <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
+          <label style="display:flex;gap:0.6rem;align-items:flex-start;cursor:pointer;user-select:none">
+            <input type="checkbox" bind:checked={sectionBlur} style="width:auto;margin-top:2px;flex-shrink:0" onchange={saveBg} />
+            <span>
+              <strong style="display:block;margin-bottom:0.15rem">Blur behind sections</strong>
+              <span style="color:var(--text-muted);font-size:12px">Frosted glass blur effect behind each section card.</span>
+            </span>
+          </label>
+          {#if sectionBlur}
+            <div style="margin-top:0.75rem">
+              <label class="form-label" style="display:flex;justify-content:space-between">
+                <span>Blur intensity</span><strong style="min-width:34px;text-align:right">{sectionBlurAmount}px</strong>
+              </label>
+              <input type="range" min="0" max="40" step="1" bind:value={sectionBlurAmount}
+                style="width:100%;accent-color:var(--accent);margin-top:0.35rem" onchange={saveBg} />
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
+                <span>0 (none)</span><span>8 (default)</span><span>40 (heavy)</span>
+              </div>
+            </div>
+          {/if}
+        </div>
       </div>
     {/if}
   </div>
 
-  <!-- ── Layout ── -->
+  <!-- Layout -->
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Layout</p>
     <div class="form-group">
@@ -1094,7 +1124,10 @@
     </button>
   </div>
 
-  <!-- ── Names ── -->
+  <!-- ════════════════ CONTENT TAB ════════════════ -->
+  {:else if activeTab === 'content'}
+
+  <!-- Names -->
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Names</p>
     <div class="tag-list" style="margin-bottom:0.75rem">
@@ -1119,71 +1152,7 @@
     </div>
   </div>
 
-  <!-- ── Custom Fields ── -->
-  <div class="card" style="margin-bottom:1rem">
-    <p class="section-title">Custom Fields</p>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
-      Create named lists for anything — hobbies, languages, favourite media, etc. Each entry can have an optional qualifier in brackets.
-    </p>
-
-    {#each customFields as field (field.id)}
-      <div class="field-block">
-        <div class="field-block-header">
-          <input
-            class="field-name-input"
-            type="text"
-            bind:value={fieldNameEdits[field.id]}
-            onblur={() => renameField(field.id)}
-            onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
-          />
-          <button class="btn btn-danger btn-sm" onclick={() => deleteField(field.id)}>Delete field</button>
-        </div>
-
-        <div class="tag-list" style="margin-bottom:0.6rem">
-          {#each field.entries as entry}
-            <div class="removable">
-              <button class="pref-btn" onclick={() => cycleEntryPreference(field.id, entry.id)} title={entry.preference === 'favorite' ? 'Favorite — click to set okay' : entry.preference === 'okay' ? 'Okay — click to clear' : 'No preference — click to set favorite'}>
-                {#if entry.preference === 'favorite'}<i class="fa-solid fa-star" style="color:var(--accent)"></i>
-                {:else if entry.preference === 'okay'}<i class="fa-solid fa-thumbs-up" style="color:var(--accent)"></i>
-                {:else}<i class="fa-regular fa-star" style="color:var(--text-muted)"></i>{/if}
-              </button>
-              {entry.value}{#if entry.entry_status}<span style="color:var(--text-muted);margin-left:3px">({entry.entry_status})</span>{/if}
-              <button class="remove-btn" onclick={() => removeEntry(field.id, entry.id)} title="Remove">×</button>
-            </div>
-          {:else}
-            <span style="font-size:13px;color:var(--text-muted)">No entries yet</span>
-          {/each}
-        </div>
-
-        <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
-          <input
-            type="text"
-            style="flex:2;min-width:120px"
-            placeholder="Entry value…"
-            bind:value={newEntryValues[field.id]}
-            onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addEntry(field.id))}
-          />
-          <input
-            type="text"
-            style="flex:1;min-width:80px"
-            placeholder="Qualifier (optional)"
-            bind:value={newEntryStatuses[field.id]}
-            onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addEntry(field.id))}
-          />
-          <button class="btn btn-secondary btn-sm" onclick={() => addEntry(field.id)}
-            disabled={!newEntryValues[field.id]?.trim()}>Add</button>
-        </div>
-      </div>
-    {/each}
-
-    <div class="form-row" style="margin-top:0.25rem">
-      <input type="text" bind:value={newFieldName} placeholder="New field name…"
-        onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addField())} />
-      <button class="btn btn-primary btn-sm" onclick={addField} disabled={!newFieldName.trim()}>+ Add field</button>
-    </div>
-  </div>
-
-  <!-- ── Flags ── -->
+  <!-- Pride Flags -->
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Pride Flags</p>
     <div class="flags-grid" style="margin-bottom:0.75rem">
@@ -1202,12 +1171,10 @@
         <span style="font-size:13px;color:var(--text-muted)">No flags added yet</span>
       {/each}
     </div>
-
-    <!-- Preset flag browser -->
     <div style="margin-bottom:1rem">
       <button class="btn btn-secondary btn-sm" onclick={() => presetBrowserOpen = !presetBrowserOpen}>
         <i class="fa-solid fa-{presetBrowserOpen ? 'chevron-up' : 'list'}"></i>
-        {presetBrowserOpen ? 'Hide' : 'Browse'} the flags that were avalible via the api I am using
+        {presetBrowserOpen ? 'Hide' : 'Browse'} preset flags
       </button>
     </div>
     {#if presetBrowserOpen}
@@ -1216,13 +1183,9 @@
         <div class="flags-grid" style="max-height:260px;overflow-y:auto">
           {#each filteredPresets as pf}
             {@const alreadyAdded = flags.some(f => f.flag_name === pf.name)}
-            <button
-              class="flag-card preset-flag-btn"
-              onclick={() => !alreadyAdded && addPresetFlag(pf)}
-              disabled={alreadyAdded}
-              title={alreadyAdded ? 'Already added' : `Add ${pf.name}`}
-              style="cursor:{alreadyAdded ? 'default' : 'pointer'};opacity:{alreadyAdded ? 0.45 : 1};border:none;padding:0;text-align:left"
-            >
+            <button class="flag-card preset-flag-btn" onclick={() => !alreadyAdded && addPresetFlag(pf)}
+              disabled={alreadyAdded} title={alreadyAdded ? 'Already added' : `Add ${pf.name}`}
+              style="cursor:{alreadyAdded ? 'default' : 'pointer'};opacity:{alreadyAdded ? 0.45 : 1};border:none;padding:0;text-align:left">
               {#if pf.url.startsWith('css:')}
                 <div class="flag {pf.url.slice(4)}"></div>
               {:else}
@@ -1236,8 +1199,6 @@
         </div>
       </div>
     {/if}
-
-    <!-- Custom flag upload -->
     <div class="form-group">
       <label class="form-label">Upload a custom flag</label>
       <input type="text" bind:value={newFlagName} placeholder="Flag name (e.g. Nonbinary Pride)" style="margin-bottom:0.5rem" />
@@ -1258,11 +1219,59 @@
     </div>
   </div>
 
-  <!-- ── Links ── -->
+  <!-- Custom Sections -->
+  <div class="card" style="margin-bottom:1rem">
+    <p class="section-title">Custom Sections</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
+      Create named lists for anything — hobbies, languages, favourite media, etc. Each entry can have an optional qualifier in brackets.
+    </p>
+    {#each customFields as field (field.id)}
+      <div class="field-block">
+        <div class="field-block-header">
+          <input class="field-name-input" type="text" bind:value={fieldNameEdits[field.id]}
+            onblur={() => renameField(field.id)}
+            onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()} />
+          <button class="btn btn-danger btn-sm" onclick={() => deleteField(field.id)}>Delete</button>
+        </div>
+        <div class="tag-list" style="margin-bottom:0.6rem">
+          {#each field.entries as entry}
+            <div class="removable">
+              <button class="pref-btn" onclick={() => cycleEntryPreference(field.id, entry.id)} title={entry.preference === 'favorite' ? 'Favorite — click to set okay' : entry.preference === 'okay' ? 'Okay — click to clear' : 'No preference — click to set favorite'}>
+                {#if entry.preference === 'favorite'}<i class="fa-solid fa-star" style="color:var(--accent)"></i>
+                {:else if entry.preference === 'okay'}<i class="fa-solid fa-thumbs-up" style="color:var(--accent)"></i>
+                {:else}<i class="fa-regular fa-star" style="color:var(--text-muted)"></i>{/if}
+              </button>
+              {entry.value}{#if entry.entry_status}<span style="color:var(--text-muted);margin-left:3px">({entry.entry_status})</span>{/if}
+              <button class="remove-btn" onclick={() => removeEntry(field.id, entry.id)} title="Remove">×</button>
+            </div>
+          {:else}
+            <span style="font-size:13px;color:var(--text-muted)">No entries yet</span>
+          {/each}
+        </div>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+          <input type="text" style="flex:2;min-width:120px" placeholder="Entry value…"
+            bind:value={newEntryValues[field.id]}
+            onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addEntry(field.id))} />
+          <input type="text" style="flex:1;min-width:80px" placeholder="Qualifier (optional)"
+            bind:value={newEntryStatuses[field.id]}
+            onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addEntry(field.id))} />
+          <button class="btn btn-secondary btn-sm" onclick={() => addEntry(field.id)}
+            disabled={!newEntryValues[field.id]?.trim()}>Add</button>
+        </div>
+      </div>
+    {/each}
+    <div class="form-row" style="margin-top:0.25rem">
+      <input type="text" bind:value={newFieldName} placeholder="New section name…"
+        onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addField())} />
+      <button class="btn btn-primary btn-sm" onclick={addField} disabled={!newFieldName.trim()}>+ Add section</button>
+    </div>
+  </div>
+
+  <!-- Links -->
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Links</p>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:0.75rem">
-      Add links to your other accounts and websites. Your main website can also be set in Basic Info above.
+      Add links to your other accounts and websites. Your main website can be set in the Profile tab.
     </p>
     <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.75rem">
       {#each links as l (l.id)}
@@ -1291,18 +1300,13 @@
             </div>
             {#if l.link_icon_mode !== 'text'}
               <button class="btn btn-ghost btn-sm link-icon-btn" onclick={() => { linkPickerFor = l.id; }} title="Choose icon">
-                {#if l.link_icon}
-                  <i class={l.link_icon}></i>
-                {:else}
-                  <i class="fa-solid fa-plus"></i>
-                {/if}
+                {#if l.link_icon}<i class={l.link_icon}></i>{:else}<i class="fa-solid fa-plus"></i>{/if}
               </button>
               <div class="link-size-control">
                 <input type="range" min="0.75" max="4" step="0.25"
                   value={l.link_icon_size ?? 1.5}
                   oninput={(e) => { links = links.map(x => x.id === l.id ? { ...x, link_icon_size: parseFloat((e.target as HTMLInputElement).value) } : x); }}
-                  onchange={(e) => setLinkIconSize(l.id, parseFloat((e.target as HTMLInputElement).value))}
-                />
+                  onchange={(e) => setLinkIconSize(l.id, parseFloat((e.target as HTMLInputElement).value))} />
                 <span class="link-size-val">{(l.link_icon_size ?? 1.5).toFixed(2).replace(/\.?0+$/, '')}×</span>
               </div>
             {/if}
@@ -1314,45 +1318,27 @@
       {/each}
     </div>
     <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:flex-end">
-      <input type="text" style="flex:1;min-width:100px" bind:value={newLinkLabel}
-        placeholder="Label (e.g. Twitter)" />
-      <input type="url" style="flex:2;min-width:160px" bind:value={newLinkUrl}
-        placeholder="URL" />
+      <input type="text" style="flex:1;min-width:100px" bind:value={newLinkLabel} placeholder="Label (e.g. Twitter)" />
+      <input type="url" style="flex:2;min-width:160px" bind:value={newLinkUrl} placeholder="URL" />
       <div class="link-mode-seg">
-        <button class="link-mode-btn" class:active={newLinkMode === 'text'}
-          onclick={() => newLinkMode = 'text'} title="Text only">
-          <i class="fa-solid fa-font"></i>
-        </button>
-        <button class="link-mode-btn" class:active={newLinkMode === 'icon'}
-          onclick={() => newLinkMode = 'icon'} title="Icon only">
-          <i class="fa-solid fa-icons"></i>
-        </button>
-        <button class="link-mode-btn" class:active={newLinkMode === 'both'}
-          onclick={() => newLinkMode = 'both'} title="Icon + Text">
-          <i class="fa-solid fa-font"></i><i class="fa-solid fa-icons" style="font-size:0.7em;margin-left:1px"></i>
-        </button>
+        <button class="link-mode-btn" class:active={newLinkMode === 'text'} onclick={() => newLinkMode = 'text'} title="Text only"><i class="fa-solid fa-font"></i></button>
+        <button class="link-mode-btn" class:active={newLinkMode === 'icon'} onclick={() => newLinkMode = 'icon'} title="Icon only"><i class="fa-solid fa-icons"></i></button>
+        <button class="link-mode-btn" class:active={newLinkMode === 'both'} onclick={() => newLinkMode = 'both'} title="Icon + Text"><i class="fa-solid fa-font"></i><i class="fa-solid fa-icons" style="font-size:0.7em;margin-left:1px"></i></button>
       </div>
       {#if newLinkMode !== 'text'}
         <button class="btn btn-ghost btn-sm link-icon-btn" onclick={() => { linkPickerFor = 'new'; }} title="Choose icon">
-          {#if newLinkIcon}
-            <i class={newLinkIcon}></i>
-          {:else}
-            <i class="fa-solid fa-plus"></i> Icon
-          {/if}
+          {#if newLinkIcon}<i class={newLinkIcon}></i>{:else}<i class="fa-solid fa-plus"></i> Icon{/if}
         </button>
         <div class="link-size-control">
-          <input type="range" min="0.75" max="4" step="0.25"
-            bind:value={newLinkIconSize}
-          />
+          <input type="range" min="0.75" max="4" step="0.25" bind:value={newLinkIconSize} />
           <span class="link-size-val">{newLinkIconSize.toFixed(2).replace(/\.?0+$/, '')}×</span>
         </div>
       {/if}
-      <button class="btn btn-secondary btn-sm" onclick={addLink}
-        disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}>Add</button>
+      <button class="btn btn-secondary btn-sm" onclick={addLink} disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}>Add</button>
     </div>
   </div>
 
-  <!-- ── Extra Images ── -->
+  <!-- Extra Images -->
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Extra Images</p>
     <div class="images-grid" style="margin-bottom:0.75rem">
@@ -1386,34 +1372,28 @@
     </div>
   </div>
 
-  <!-- ── Badges ── -->
+  <!-- ════════════════ SOCIAL TAB ════════════════ -->
+  {:else if activeTab === 'social'}
+
+  <!-- Badges -->
   {#if badges.length > 0}
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Badges</p>
-    <p style="font-size:13px;color:var(--text-muted);margin-bottom:0.75rem">
-      Drag to reorder. Toggle the eye to show or hide a badge on your profile.
-    </p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:0.75rem">Drag to reorder. Toggle the eye to show or hide a badge on your profile.</p>
     <div style="display:flex;flex-direction:column;gap:0.4rem">
       {#each badges as b (b.id)}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          draggable={true}
+        <div draggable={true}
           ondragstart={(e) => onBadgeDragStart(e, b.id)}
           ondragover={(e) => onBadgeDragOver(e, b.id)}
           ondragend={onBadgeDragEnd}
-          style="display:flex;align-items:center;gap:0.6rem;padding:0.45rem 0.6rem;border-radius:var(--radius);background:var(--card-bg);border:1px solid var(--border);cursor:grab;opacity:{b.visible ? 1 : 0.45}"
-        >
+          style="display:flex;align-items:center;gap:0.6rem;padding:0.45rem 0.6rem;border-radius:var(--radius);background:var(--card-bg);border:1px solid var(--border);cursor:grab;opacity:{b.visible ? 1 : 0.45}">
           <i class="fa-solid fa-grip-vertical" style="color:var(--text-muted);font-size:12px"></i>
-          <span class="profile-badge" style="--badge-color:{b.color}">
-            <i class="{b.icon}"></i> {b.name}
-          </span>
+          <span class="profile-badge" style="--badge-color:{b.color}"><i class="{b.icon}"></i> {b.name}</span>
           <span style="flex:1;font-size:12px;color:var(--text-muted)">{b.description}</span>
-          <button
-            class="btn btn-ghost btn-sm"
-            style="padding:0.2rem 0.5rem;font-size:12px"
+          <button class="btn btn-ghost btn-sm" style="padding:0.2rem 0.5rem;font-size:12px"
             title={b.visible ? 'Hide badge' : 'Show badge'}
-            onclick={() => toggleBadgeVisibility(b.id, !b.visible)}
-          >
+            onclick={() => toggleBadgeVisibility(b.id, !b.visible)}>
             <i class="fa-solid {b.visible ? 'fa-eye' : 'fa-eye-slash'}"></i>
           </button>
         </div>
@@ -1422,7 +1402,7 @@
   </div>
   {/if}
 
-  <!-- ── Friends ── -->
+  <!-- Friends -->
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Friends</p>
     <p style="font-size:13px;color:var(--text-muted);margin-bottom:0.75rem">
@@ -1444,6 +1424,8 @@
       <button class="btn btn-secondary btn-sm" onclick={addFriend} disabled={!newFriend.trim()}>Add</button>
     </div>
   </div>
+
+  {/if}
 </div>
 {/if}
 
@@ -1472,6 +1454,38 @@
 {/if}
 
 <style>
+  .editor-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0;
+  }
+  .editor-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: var(--radius) var(--radius) 0 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .editor-tab:hover {
+    color: var(--text);
+    background: var(--bg-input);
+  }
+  .editor-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    background: none;
+  }
   .link-item {
     flex-wrap: wrap;
     justify-content: space-between;
