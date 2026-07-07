@@ -1551,9 +1551,11 @@
   .link-size-val {
     font-size: 11px;
     color: var(--text-muted);
-    min-width: 2.4ch;
+    width: 34px;
+    flex-shrink: 0;
     text-align: right;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .size-toast {
