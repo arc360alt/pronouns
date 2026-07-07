@@ -303,6 +303,7 @@
         <div class="profile-bg-overlay" style="opacity:{1 - brightness}"></div>
       </div>
     {/if}
+    <div class="profile-content-scroll">
     <!-- Banner — hidden when user has a background set and chose to merge -->
     {#if !hideBanner}
       {#if profile.banner && isVideo(profile.banner)}
@@ -515,6 +516,7 @@
           </button>
         </div>
       {/if}
+    </div>
     </div>
   </div>
 

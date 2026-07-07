@@ -529,25 +529,35 @@ button.pref-btn:hover { opacity: 1; background: none; }
 .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
 
 /* Profile background system */
-/* z-index: -1 on the background creates a separate GPU compositor layer that
-   backdrop-filter cannot see (Firefox/Chrome limitation). z-index: 0 keeps it
-   in the normal composite stack so backdrop-filter works. The wrapper at z-index: 1
-   (+ position:relative to form a stacking context) ensures content paints above the
-   background. No transform needed — position:fixed stays relative to the viewport. */
+/* backdrop-filter cannot see position:fixed elements on separate GPU layers.
+   Fix: make has-profile-bg itself the fixed compositor layer (position:fixed, inset:0).
+   The background (position:absolute) and content scroll (position:absolute) are both
+   INSIDE this layer — same compositor — so backdrop-filter on cards can see the
+   background video/image. Content scrolls via its own overflow-y:auto child. */
 main.main-content:has(.has-profile-bg) {
   padding: 0;
 }
 .has-profile-bg {
-  position: relative;
-  z-index: 1;
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
 }
 .profile-bg-root {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
+}
+.has-profile-bg .profile-content-scroll {
+  position: absolute;
+  top: var(--nav-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .profile-bg-fill {
   position: absolute;
