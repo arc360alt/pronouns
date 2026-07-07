@@ -529,18 +529,19 @@ button.pref-btn:hover { opacity: 1; background: none; }
 .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
 
 /* Profile background system */
-/* position:relative + z-index:0 creates a stacking context so the absolute background
-   at z-index:-1 sits behind the cards in the SAME context — required for backdrop-filter.
-   Using position:absolute (not fixed) keeps the bg in the same compositor layer as the
-   cards so backdrop-filter can actually blur through to it. */
+/* position:relative (no z-index) gives absolute children a containing block without
+   creating a new stacking context. The bg at z-index:-1 lives in the nearest ancestor
+   stacking context (root), same as the cards — so backdrop-filter can see it.
+   position:absolute (not fixed) keeps the bg in the same GPU compositor layer as
+   the cards, which is what makes backdrop-filter actually blur through it. */
 .has-profile-bg {
   position: relative;
-  z-index: 0;
   min-height: 100vh;
 }
 .profile-bg-root {
   position: absolute;
   inset: 0;
+  min-height: 100vh;
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
