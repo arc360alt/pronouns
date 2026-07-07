@@ -7,6 +7,7 @@
   import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
   import ImageCropModal from '$lib/components/ImageCropModal.svelte';
   import PixLoader from '$lib/components/PixLoader.svelte';
+  import FaIconPicker from '$lib/components/FaIconPicker.svelte';
 
   // Basic profile fields
   let displayName = $state('');
@@ -167,6 +168,9 @@
   let newFriend = $state('');
   let newLinkLabel = $state('');
   let newLinkUrl = $state('');
+  let newLinkMode = $state<'text' | 'icon' | 'both'>('text');
+  let newLinkIcon = $state<string | null>(null);
+  let linkPickerFor = $state<number | 'new' | null>(null);
   let newFieldName = $state('');
 
   // Per-field new entry inputs (keyed by field id)
@@ -567,10 +571,17 @@
   async function addLink() {
     if (!newLinkLabel.trim() || !newLinkUrl.trim()) return;
     try {
-      const l = await api.post<ProfileLink>('/api/profile/links', { link_label: newLinkLabel.trim(), link_url: newLinkUrl.trim() });
+      const l = await api.post<ProfileLink>('/api/profile/links', {
+        link_label: newLinkLabel.trim(),
+        link_url: newLinkUrl.trim(),
+        link_icon_mode: newLinkMode,
+        link_icon: newLinkIcon,
+      });
       links = [...links, l];
       newLinkLabel = '';
       newLinkUrl = '';
+      newLinkMode = 'text';
+      newLinkIcon = null;
     } catch (err) {
       itemMsg = err instanceof Error ? err.message : 'Failed';
     }
@@ -579,6 +590,22 @@
   async function removeLink(id: number) {
     await api.delete(`/api/profile/links/${id}`);
     links = links.filter(l => l.id !== id);
+  }
+
+  async function setLinkMode(id: number, mode: 'text' | 'icon' | 'both') {
+    links = links.map(l => l.id === id ? { ...l, link_icon_mode: mode } : l);
+    try { await api.put(`/api/profile/links/${id}`, { link_icon_mode: mode }); } catch {}
+  }
+
+  function handleIconSelect(cls: string) {
+    const target = linkPickerFor;
+    if (target === 'new') {
+      newLinkIcon = cls;
+    } else if (typeof target === 'number') {
+      links = links.map(l => l.id === target ? { ...l, link_icon: cls } : l);
+      api.put(`/api/profile/links/${target}`, { link_icon: cls }).catch(() => {});
+    }
+    linkPickerFor = null;
   }
 
   async function addField() {
@@ -1230,23 +1257,74 @@
       Add links to your other accounts and websites. Your main website can also be set in Basic Info above.
     </p>
     <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.75rem">
-      {#each links as l}
-        <div class="removable" style="justify-content:space-between">
-          <span>
+      {#each links as l (l.id)}
+        <div class="removable link-item">
+          <div class="link-item-info">
+            {#if l.link_icon_mode !== 'text' && l.link_icon}
+              <i class="{l.link_icon} link-item-icon-preview"></i>
+            {/if}
             <span style="font-weight:500">{l.link_label}</span>
-            <span style="color:var(--text-muted);margin-left:0.5rem;font-size:12px">{l.link_url}</span>
-          </span>
-          <button class="remove-btn" onclick={() => removeLink(l.id)} title="Remove">×</button>
+            <span class="link-item-url">{l.link_url}</span>
+          </div>
+          <div class="link-item-controls">
+            <div class="link-mode-seg">
+              <button class="link-mode-btn" class:active={l.link_icon_mode === 'text'}
+                onclick={() => setLinkMode(l.id, 'text')} title="Text only">
+                <i class="fa-solid fa-font"></i>
+              </button>
+              <button class="link-mode-btn" class:active={l.link_icon_mode === 'icon'}
+                onclick={() => setLinkMode(l.id, 'icon')} title="Icon only">
+                <i class="fa-solid fa-icons"></i>
+              </button>
+              <button class="link-mode-btn" class:active={l.link_icon_mode === 'both'}
+                onclick={() => setLinkMode(l.id, 'both')} title="Icon + Text">
+                <i class="fa-solid fa-font"></i><i class="fa-solid fa-icons" style="font-size:0.7em;margin-left:1px"></i>
+              </button>
+            </div>
+            {#if l.link_icon_mode !== 'text'}
+              <button class="btn btn-ghost btn-sm link-icon-btn" onclick={() => { linkPickerFor = l.id; }} title="Choose icon">
+                {#if l.link_icon}
+                  <i class={l.link_icon}></i>
+                {:else}
+                  <i class="fa-solid fa-plus"></i>
+                {/if}
+              </button>
+            {/if}
+            <button class="remove-btn" onclick={() => removeLink(l.id)} title="Remove">×</button>
+          </div>
         </div>
       {:else}
         <span style="font-size:13px;color:var(--text-muted)">No links added yet</span>
       {/each}
     </div>
-    <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:flex-end">
       <input type="text" style="flex:1;min-width:100px" bind:value={newLinkLabel}
         placeholder="Label (e.g. Twitter)" />
       <input type="url" style="flex:2;min-width:160px" bind:value={newLinkUrl}
         placeholder="URL" />
+      <div class="link-mode-seg">
+        <button class="link-mode-btn" class:active={newLinkMode === 'text'}
+          onclick={() => newLinkMode = 'text'} title="Text only">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <button class="link-mode-btn" class:active={newLinkMode === 'icon'}
+          onclick={() => newLinkMode = 'icon'} title="Icon only">
+          <i class="fa-solid fa-icons"></i>
+        </button>
+        <button class="link-mode-btn" class:active={newLinkMode === 'both'}
+          onclick={() => newLinkMode = 'both'} title="Icon + Text">
+          <i class="fa-solid fa-font"></i><i class="fa-solid fa-icons" style="font-size:0.7em;margin-left:1px"></i>
+        </button>
+      </div>
+      {#if newLinkMode !== 'text'}
+        <button class="btn btn-ghost btn-sm link-icon-btn" onclick={() => { linkPickerFor = 'new'; }} title="Choose icon">
+          {#if newLinkIcon}
+            <i class={newLinkIcon}></i>
+          {:else}
+            <i class="fa-solid fa-plus"></i> Icon
+          {/if}
+        </button>
+      {/if}
       <button class="btn btn-secondary btn-sm" onclick={addLink}
         disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}>Add</button>
     </div>
@@ -1355,6 +1433,14 @@
   />
 {/if}
 
+{#if linkPickerFor !== null}
+  <FaIconPicker
+    value={linkPickerFor === 'new' ? newLinkIcon : (links.find(l => l.id === linkPickerFor)?.link_icon ?? null)}
+    onselect={handleIconSelect}
+    onclose={() => { linkPickerFor = null; }}
+  />
+{/if}
+
 {#if sizeToast}
   <div class="size-toast">
     <i class="fa-solid fa-triangle-exclamation"></i>
@@ -1364,6 +1450,71 @@
 {/if}
 
 <style>
+  .link-item {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+  .link-item-info {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+  .link-item-icon-preview {
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 1.1rem;
+    text-align: center;
+  }
+  .link-item-url {
+    color: var(--text-muted);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .link-item-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+  .link-mode-seg {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .link-mode-btn {
+    background: none;
+    border: none;
+    border-right: 1px solid var(--border);
+    padding: 0.2rem 0.45rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1;
+    transition: background 0.1s, color 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+  }
+  .link-mode-btn:last-child { border-right: none; }
+  .link-mode-btn:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--text); }
+  .link-mode-btn.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+  .link-icon-btn {
+    padding: 0.2rem 0.5rem;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
   .size-toast {
     position: fixed;
     bottom: 1.5rem;

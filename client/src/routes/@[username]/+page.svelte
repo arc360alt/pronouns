@@ -420,8 +420,16 @@
               {#if profile.links.length > 0}
                 <div class="tag-list">
                   {#each profile.links as link}
-                    <a href={link.link_url} target="_blank" rel="noopener noreferrer" class="profile-link-btn">
-                      <span class="link-inner">{link.link_label} <i class="fa-solid fa-arrow-up-right-from-square"></i></span>
+                    <a href={link.link_url} target="_blank" rel="noopener noreferrer" class="profile-link-btn" aria-label={link.link_label}>
+                      <span class="link-inner">
+                        {#if link.link_icon_mode === 'icon' && link.link_icon}
+                          <i class={link.link_icon}></i>
+                        {:else if link.link_icon_mode === 'both' && link.link_icon}
+                          <i class={link.link_icon}></i>{link.link_label}
+                        {:else}
+                          {link.link_label} <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        {/if}
+                      </span>
                     </a>
                   {/each}
                 </div>

@@ -41,6 +41,8 @@ export interface ProfileLink {
   link_label: string;
   link_url: string;
   sort_order: number;
+  link_icon: string | null;
+  link_icon_mode: 'text' | 'icon' | 'both';
 }
 
 export interface CustomFieldEntry {
