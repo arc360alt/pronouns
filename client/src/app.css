@@ -529,6 +529,11 @@ button.pref-btn:hover { opacity: 1; background: none; }
 .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
 
 /* Profile background system */
+/* isolation:isolate creates a stacking context so z-index:-1 children (the bg)
+   sit behind the cards but within the same context — required for backdrop-filter to see them */
+.has-profile-bg {
+  isolation: isolate;
+}
 .profile-bg-root {
   position: fixed;
   inset: 0;
