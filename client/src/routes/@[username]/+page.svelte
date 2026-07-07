@@ -230,7 +230,24 @@
 </script>
 
 <svelte:head>
-  <title>{profile ? (profile.display_name || '@' + profile.username) : 'Profile'} — pronouns</title>
+  {#if profile}
+    {@const ogTitle = `${profile.display_name || '@' + profile.username} — pronouns`}
+    {@const ogDesc = profile.bio ? profile.bio.replace(/[#*_`\[\]()]/g, '').replace(/\n+/g, ' ').trim().slice(0, 200) : `${profile.display_name || '@' + profile.username}'s pronouns profile`}
+    <title>{ogTitle}</title>
+    <meta property="og:title" content={ogTitle} />
+    <meta property="og:description" content={ogDesc} />
+    <meta property="og:type" content="profile" />
+    <meta property="og:url" content={$page.url.href} />
+    {#if profile.profile_picture}
+      <meta property="og:image" content={profile.profile_picture.startsWith('http') ? profile.profile_picture : `https://pronouns.sbs${profile.profile_picture}`} />
+      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:image" content={profile.profile_picture.startsWith('http') ? profile.profile_picture : `https://pronouns.sbs${profile.profile_picture}`} />
+    {/if}
+    <meta name="twitter:title" content={ogTitle} />
+    <meta name="twitter:description" content={ogDesc} />
+  {:else}
+    <title>Profile — pronouns</title>
+  {/if}
 </svelte:head>
 
 {#if loading}
