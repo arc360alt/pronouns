@@ -423,9 +423,9 @@
                     <a href={link.link_url} target="_blank" rel="noopener noreferrer" class="profile-link-btn" aria-label={link.link_label}>
                       <span class="link-inner">
                         {#if link.link_icon_mode === 'icon' && link.link_icon}
-                          <i class={link.link_icon}></i>
+                          <i class={link.link_icon} style="font-size:{link.link_icon_size ?? 1.5}em"></i>
                         {:else if link.link_icon_mode === 'both' && link.link_icon}
-                          <i class={link.link_icon}></i>{link.link_label}
+                          <i class={link.link_icon} style="font-size:{link.link_icon_size ?? 1.5}em"></i>{link.link_label}
                         {:else}
                           {link.link_label} <i class="fa-solid fa-arrow-up-right-from-square"></i>
                         {/if}

@@ -160,21 +160,22 @@ router.delete('/friends/:id', requireAuth, (req, res) => {
 
 // --- Links ---
 router.post('/links', requireAuth, (req, res) => {
-  const { link_label, link_url, link_icon, link_icon_mode } = req.body;
+  const { link_label, link_url, link_icon, link_icon_mode, link_icon_size } = req.body;
   if (!link_label?.trim() || !link_url?.trim()) return res.status(400).json({ error: 'Label and URL are required' });
   const allowedModes = ['text', 'icon', 'both'];
   const mode = allowedModes.includes(link_icon_mode) ? link_icon_mode : 'text';
   const icon = typeof link_icon === 'string' && link_icon.trim() ? link_icon.trim() : null;
+  const size = typeof link_icon_size === 'number' && link_icon_size >= 0.5 && link_icon_size <= 6 ? link_icon_size : 1.5;
   const row = db.prepare('SELECT MAX(sort_order) as m FROM profile_links WHERE user_id = ?').get(req.user!.id) as { m: number | null };
   const nextOrder = (row.m ?? -1) + 1;
   const result = db.prepare(
-    'INSERT INTO profile_links (user_id, link_label, link_url, sort_order, link_icon, link_icon_mode) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(req.user!.id, link_label.trim(), link_url.trim(), nextOrder, icon, mode);
-  return res.status(201).json({ id: result.lastInsertRowid, link_label: link_label.trim(), link_url: link_url.trim(), sort_order: nextOrder, link_icon: icon, link_icon_mode: mode });
+    'INSERT INTO profile_links (user_id, link_label, link_url, sort_order, link_icon, link_icon_mode, link_icon_size) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(req.user!.id, link_label.trim(), link_url.trim(), nextOrder, icon, mode, size);
+  return res.status(201).json({ id: result.lastInsertRowid, link_label: link_label.trim(), link_url: link_url.trim(), sort_order: nextOrder, link_icon: icon, link_icon_mode: mode, link_icon_size: size });
 });
 
 router.put('/links/:id', requireAuth, (req, res) => {
-  const { link_icon, link_icon_mode } = req.body;
+  const { link_icon, link_icon_mode, link_icon_size } = req.body;
   const allowedModes = ['text', 'icon', 'both'];
   const updates: string[] = [];
   const params: unknown[] = [];
@@ -185,6 +186,10 @@ router.put('/links/:id', requireAuth, (req, res) => {
   if (link_icon !== undefined) {
     updates.push('link_icon = ?');
     params.push(typeof link_icon === 'string' && link_icon.trim() ? link_icon.trim() : null);
+  }
+  if (link_icon_size !== undefined) {
+    updates.push('link_icon_size = ?');
+    params.push(typeof link_icon_size === 'number' && link_icon_size >= 0.5 && link_icon_size <= 6 ? link_icon_size : 1.5);
   }
   if (updates.length === 0) return res.status(400).json({ error: 'Nothing to update' });
   params.push(req.params.id, req.user!.id);

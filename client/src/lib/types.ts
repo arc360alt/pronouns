@@ -43,6 +43,7 @@ export interface ProfileLink {
   sort_order: number;
   link_icon: string | null;
   link_icon_mode: 'text' | 'icon' | 'both';
+  link_icon_size: number;
 }
 
 export interface CustomFieldEntry {

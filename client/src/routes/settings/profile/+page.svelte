@@ -170,6 +170,7 @@
   let newLinkUrl = $state('');
   let newLinkMode = $state<'text' | 'icon' | 'both'>('text');
   let newLinkIcon = $state<string | null>(null);
+  let newLinkIconSize = $state(1.5);
   let linkPickerFor = $state<number | 'new' | null>(null);
   let newFieldName = $state('');
 
@@ -576,12 +577,14 @@
         link_url: newLinkUrl.trim(),
         link_icon_mode: newLinkMode,
         link_icon: newLinkIcon,
+        link_icon_size: newLinkIconSize,
       });
       links = [...links, l];
       newLinkLabel = '';
       newLinkUrl = '';
       newLinkMode = 'text';
       newLinkIcon = null;
+      newLinkIconSize = 1.5;
     } catch (err) {
       itemMsg = err instanceof Error ? err.message : 'Failed';
     }
@@ -595,6 +598,11 @@
   async function setLinkMode(id: number, mode: 'text' | 'icon' | 'both') {
     links = links.map(l => l.id === id ? { ...l, link_icon_mode: mode } : l);
     try { await api.put(`/api/profile/links/${id}`, { link_icon_mode: mode }); } catch {}
+  }
+
+  async function setLinkIconSize(id: number, size: number) {
+    links = links.map(l => l.id === id ? { ...l, link_icon_size: size } : l);
+    try { await api.put(`/api/profile/links/${id}`, { link_icon_size: size }); } catch {}
   }
 
   function handleIconSelect(cls: string) {
@@ -1289,6 +1297,14 @@
                   <i class="fa-solid fa-plus"></i>
                 {/if}
               </button>
+              <div class="link-size-control">
+                <input type="range" min="0.75" max="4" step="0.25"
+                  value={l.link_icon_size ?? 1.5}
+                  oninput={(e) => { links = links.map(x => x.id === l.id ? { ...x, link_icon_size: parseFloat((e.target as HTMLInputElement).value) } : x); }}
+                  onchange={(e) => setLinkIconSize(l.id, parseFloat((e.target as HTMLInputElement).value))}
+                />
+                <span class="link-size-val">{(l.link_icon_size ?? 1.5).toFixed(2).replace(/\.?0+$/, '')}×</span>
+              </div>
             {/if}
             <button class="remove-btn" onclick={() => removeLink(l.id)} title="Remove">×</button>
           </div>
@@ -1324,6 +1340,12 @@
             <i class="fa-solid fa-plus"></i> Icon
           {/if}
         </button>
+        <div class="link-size-control">
+          <input type="range" min="0.75" max="4" step="0.25"
+            bind:value={newLinkIconSize}
+          />
+          <span class="link-size-val">{newLinkIconSize.toFixed(2).replace(/\.?0+$/, '')}×</span>
+        </div>
       {/if}
       <button class="btn btn-secondary btn-sm" onclick={addLink}
         disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}>Add</button>
@@ -1513,6 +1535,25 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
+  }
+  .link-size-control {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .link-size-control input[type="range"] {
+    width: 72px;
+    height: 4px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    padding: 0;
+  }
+  .link-size-val {
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 2.4ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   .size-toast {

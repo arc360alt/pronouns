@@ -162,6 +162,7 @@ addCol('users', 'google_id', 'TEXT');
 addCol('users', 'username_changed_at', 'TEXT');
 addCol('profile_links', 'link_icon', 'TEXT DEFAULT NULL');
 addCol('profile_links', 'link_icon_mode', "TEXT NOT NULL DEFAULT 'text'");
+addCol('profile_links', 'link_icon_size', 'REAL DEFAULT 1.5');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS site_settings (
@@ -286,7 +287,7 @@ export function getFullProfile(userId: number) {
     'SELECT id, friend_username FROM friends WHERE user_id = ?'
   ).all(userId);
   const links = db.prepare(
-    'SELECT id, link_label, link_url, sort_order, link_icon, link_icon_mode FROM profile_links WHERE user_id = ? ORDER BY sort_order'
+    'SELECT id, link_label, link_url, sort_order, link_icon, link_icon_mode, link_icon_size FROM profile_links WHERE user_id = ? ORDER BY sort_order'
   ).all(userId);
 
   const rawFields = db.prepare(
