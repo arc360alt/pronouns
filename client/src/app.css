@@ -623,6 +623,14 @@ main.main-content:has(.has-profile-bg) {
   backdrop-filter: blur(var(--section-blur, 8px));
   -webkit-backdrop-filter: blur(var(--section-blur, 8px));
 }
+/* Link icon buttons match section color but are +20% more opaque (capped at 100%) */
+.has-profile-bg .profile-link-btn {
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) min(100%, calc(var(--section-card-alpha, 93%) + 20%)), transparent);
+}
+.has-profile-bg.has-section-blur .profile-link-btn {
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) min(100%, calc(var(--section-card-alpha, 30%) + 20%)), transparent);
+}
+
 /* Keep old class names as no-ops so old CSS in profile page doesn't break */
 .profile-bg-fixed {
   display: none;
