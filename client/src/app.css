@@ -529,19 +529,25 @@ button.pref-btn:hover { opacity: 1; background: none; }
 .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
 
 /* Profile background system */
-/* position:relative (no z-index) gives absolute children a containing block without
-   creating a new stacking context. The bg at z-index:-1 lives in the nearest ancestor
-   stacking context (root), same as the cards — so backdrop-filter can see it.
-   position:absolute (not fixed) keeps the bg in the same GPU compositor layer as
-   the cards, which is what makes backdrop-filter actually blur through it. */
+/* transform:translateZ(0) on the wrapper does three things at once:
+   1. Promotes the element to its own GPU compositing layer
+   2. Creates a new stacking context (bg at z-index:-1 sits behind cards in the same context)
+   3. Makes position:fixed children use THIS element as their containing block instead of
+      the viewport — so the background fills the wrapper, not the whole screen, which keeps
+      it from painting behind the navbar.
+   backdrop-filter on cards can then see the background because they share the same
+   GPU layer — this is the fix for Firefox (and Chrome) where backdrop-filter cannot
+   blur across separate compositor layers. */
+main.main-content:has(.has-profile-bg) {
+  padding: 0;
+}
 .has-profile-bg {
-  position: relative;
+  transform: translateZ(0);
   min-height: 100vh;
 }
 .profile-bg-root {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  min-height: 100vh;
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
