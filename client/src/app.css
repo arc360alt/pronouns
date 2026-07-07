@@ -566,7 +566,7 @@ button.pref-btn:hover { opacity: 1; background: none; }
 /* Cards become semi-transparent when a profile bg is set. */
 .has-profile-bg .card,
 .has-profile-bg .profile-section {
-  background: color-mix(in srgb, var(--bg-card) 93%, transparent);
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) var(--section-card-alpha, 93%), transparent);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -574,12 +574,12 @@ button.pref-btn:hover { opacity: 1; background: none; }
   padding: 1rem;
 }
 .has-profile-bg .profile-identity {
-  background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) var(--section-card-alpha, 88%), transparent);
   border-radius: var(--radius);
   padding: 0.75rem 1.5rem 1rem;
 }
 .has-profile-bg .profile-divider {
-  background: color-mix(in srgb, var(--bg-card) 80%, transparent);
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) var(--section-card-alpha, 80%), transparent);
   border-radius: var(--radius);
   padding: 0.35rem 1rem;
 }

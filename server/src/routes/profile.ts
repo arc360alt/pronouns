@@ -48,7 +48,7 @@ router.put('/section-order', requireAuth, (req, res) => {
 });
 
 router.put('/background', requireAuth, (req, res) => {
-  const { profile_bg, profile_bg_type, profile_bg_brightness, hide_banner_with_bg, section_blur, section_blur_amount } = req.body;
+  const { profile_bg, profile_bg_type, profile_bg_brightness, hide_banner_with_bg, section_blur, section_blur_amount, section_bg_color, section_bg_opacity } = req.body;
   const allowed = ['none', 'color', 'gradient', 'image', 'video', 'youtube'];
   const type = allowed.includes(profile_bg_type) ? profile_bg_type : 'none';
   const brightness = typeof profile_bg_brightness === 'number'
@@ -58,8 +58,14 @@ router.put('/background', requireAuth, (req, res) => {
   const blurAmount = typeof section_blur_amount === 'number'
     ? Math.min(40, Math.max(0, section_blur_amount))
     : 8;
-  db.prepare('UPDATE profiles SET profile_bg = ?, profile_bg_type = ?, profile_bg_brightness = ?, hide_banner_with_bg = ?, section_blur = ?, section_blur_amount = ? WHERE user_id = ?')
-    .run(profile_bg || null, type, brightness, hide_banner_with_bg ? 1 : 0, blur, blurAmount, req.user!.id);
+  const bgColor = typeof section_bg_color === 'string' && /^#[0-9a-fA-F]{6}$/.test(section_bg_color.trim())
+    ? section_bg_color.trim()
+    : null;
+  const bgOpacity = typeof section_bg_opacity === 'number'
+    ? Math.min(100, Math.max(0, section_bg_opacity))
+    : null;
+  db.prepare('UPDATE profiles SET profile_bg = ?, profile_bg_type = ?, profile_bg_brightness = ?, hide_banner_with_bg = ?, section_blur = ?, section_blur_amount = ?, section_bg_color = ?, section_bg_opacity = ? WHERE user_id = ?')
+    .run(profile_bg || null, type, brightness, hide_banner_with_bg ? 1 : 0, blur, blurAmount, bgColor, bgOpacity, req.user!.id);
   return res.json({ ok: true });
 });
 

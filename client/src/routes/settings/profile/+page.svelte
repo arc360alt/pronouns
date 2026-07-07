@@ -221,6 +221,8 @@
   let hideBannerWithBg = $state(false);
   let sectionBlur = $state(false);
   let sectionBlurAmount = $state(8);
+  let sectionBgColor = $state<string | null>(null);
+  let sectionBgOpacity = $state(93);
   let profileBgUploading = $state(false);
 
   function extractYouTubeId(url: string): string | null {
@@ -260,6 +262,8 @@
       hideBannerWithBg = !!data.hide_banner_with_bg;
       sectionBlur = !!data.section_blur;
       sectionBlurAmount = data.section_blur_amount ?? 8;
+      sectionBgColor = data.section_bg_color ?? null;
+      sectionBgOpacity = data.section_bg_opacity != null ? Math.round(data.section_bg_opacity) : 93;
       if (data.profile_bg) {
         if (profileBgType === 'color') {
           profileBgColor = data.profile_bg;
@@ -404,6 +408,8 @@
         hide_banner_with_bg: hideBannerWithBg,
         section_blur: sectionBlur,
         section_blur_amount: sectionBlurAmount,
+        section_bg_color: sectionBgColor,
+        section_bg_opacity: sectionBgOpacity,
       });
       showMsg('Background saved');
     } catch (err) {
@@ -421,7 +427,7 @@
       const url = await uploadFile(file);
       profileBgUrl = url;
       profileBgType = file.type === 'video/mp4' ? 'video' : 'image';
-      await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType, profile_bg_brightness: profileBgBrightness, hide_banner_with_bg: hideBannerWithBg, section_blur: sectionBlur, section_blur_amount: sectionBlurAmount });
+      await api.put('/api/profile/background', { profile_bg: url, profile_bg_type: profileBgType, profile_bg_brightness: profileBgBrightness, hide_banner_with_bg: hideBannerWithBg, section_blur: sectionBlur, section_blur_amount: sectionBlurAmount, section_bg_color: sectionBgColor, section_bg_opacity: sectionBgOpacity });
       loadStorageUsage();
     } catch (err) { itemMsg = err instanceof Error ? err.message : 'Upload failed'; }
     finally { profileBgUploading = false; input.value = ''; }
@@ -1086,6 +1092,42 @@
               </div>
             </div>
           {/if}
+        </div>
+
+        <!-- Section card color + opacity -->
+        <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
+          <p class="form-label" style="margin-bottom:0.5rem">Section card appearance</p>
+          <div style="display:flex;gap:0.4rem;margin-bottom:0.75rem">
+            <button type="button"
+              class="btn btn-sm {sectionBgColor === null ? 'btn-primary' : 'btn-ghost'}"
+              onclick={() => { sectionBgColor = null; saveBg(); }}>
+              Theme default
+            </button>
+            <button type="button"
+              class="btn btn-sm {sectionBgColor !== null ? 'btn-primary' : 'btn-ghost'}"
+              onclick={() => { if (sectionBgColor === null) sectionBgColor = '#262626'; }}>
+              Custom color
+            </button>
+          </div>
+          {#if sectionBgColor !== null}
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+              <input type="color" bind:value={sectionBgColor}
+                style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none"
+                onchange={saveBg} />
+              <input type="text" bind:value={sectionBgColor} placeholder="#262626"
+                style="flex:1" onchange={saveBg} />
+            </div>
+          {/if}
+          <label class="form-label" style="display:flex;justify-content:space-between">
+            <span>Card opacity</span>
+            <strong style="min-width:34px;text-align:right">{sectionBgOpacity}%</strong>
+          </label>
+          <input type="range" min="0" max="100" step="1" bind:value={sectionBgOpacity}
+            style="width:100%;accent-color:var(--accent);margin-top:0.35rem"
+            onchange={saveBg} />
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
+            <span>0% (invisible)</span><span>93% (default)</span><span>100% (solid)</span>
+          </div>
         </div>
       </div>
     {/if}

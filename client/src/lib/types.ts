@@ -98,6 +98,8 @@ export interface Profile {
   forced_theme: 'dark' | 'light' | null;
   section_blur: boolean | number;
   section_blur_amount: number;
+  section_bg_color: string | null;
+  section_bg_opacity: number | null;
   show_friends: boolean | number;
   show_site: boolean | number;
   site_enabled: boolean | number;

@@ -270,7 +270,12 @@
       profile.profile_bg_type && profile.profile_bg_type !== 'none' ? 'has-profile-bg' : '',
       profile.section_blur && profile.profile_bg_type !== 'none' ? 'has-section-blur' : '',
     ].join(' ')}
-    style="{customStyle}{profile.section_blur && profile.profile_bg_type !== 'none' ? `--section-blur:${profile.section_blur_amount ?? 8}px;` : ''}"
+    style={[
+      customStyle,
+      profile.section_blur && profile.profile_bg_type !== 'none' ? `--section-blur:${profile.section_blur_amount ?? 8}px;` : '',
+      profile.profile_bg_type !== 'none' && profile.section_bg_opacity != null ? `--section-card-alpha:${Math.round(profile.section_bg_opacity)}%;` : '',
+      profile.profile_bg_type !== 'none' && profile.section_bg_color ? `--section-card-color:${profile.section_bg_color};` : '',
+    ].join('')}
   >
     <!-- Profile background layer -->
     {#if profile.profile_bg && profile.profile_bg_type !== 'none'}
