@@ -1072,66 +1072,77 @@
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
           <span>0% (dark)</span><span>50% (default)</span><span>100% (full)</span>
         </div>
-        <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
-          <label style="display:flex;gap:0.6rem;align-items:flex-start;cursor:pointer;user-select:none">
-            <input type="checkbox" bind:checked={sectionBlur} style="width:auto;margin-top:2px;flex-shrink:0" onchange={saveBg} />
-            <span>
-              <strong style="display:block;margin-bottom:0.15rem">Blur behind sections</strong>
-              <span style="color:var(--text-muted);font-size:12px">Frosted glass blur effect behind each section card.</span>
-            </span>
-          </label>
-          {#if sectionBlur}
-            <div style="margin-top:0.75rem">
-              <label class="form-label" style="display:flex;justify-content:space-between">
-                <span>Blur intensity</span><strong style="min-width:34px;text-align:right">{sectionBlurAmount}px</strong>
-              </label>
-              <input type="range" min="0" max="40" step="1" bind:value={sectionBlurAmount}
-                style="width:100%;accent-color:var(--accent);margin-top:0.35rem" onchange={saveBg} />
-              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
-                <span>0 (none)</span><span>8 (default)</span><span>40 (heavy)</span>
-              </div>
-            </div>
-          {/if}
-        </div>
-
-        <!-- Section card color + opacity -->
-        <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
-          <p class="form-label" style="margin-bottom:0.5rem">Section card appearance</p>
-          <div style="display:flex;gap:0.4rem;margin-bottom:0.75rem">
-            <button type="button"
-              class="btn btn-sm {sectionBgColor === null ? 'btn-primary' : 'btn-ghost'}"
-              onclick={() => { sectionBgColor = null; saveBg(); }}>
-              Theme default
-            </button>
-            <button type="button"
-              class="btn btn-sm {sectionBgColor !== null ? 'btn-primary' : 'btn-ghost'}"
-              onclick={() => { if (sectionBgColor === null) sectionBgColor = '#262626'; }}>
-              Custom color
-            </button>
-          </div>
-          {#if sectionBgColor !== null}
-            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
-              <input type="color" bind:value={sectionBgColor}
-                style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none"
-                onchange={saveBg} />
-              <input type="text" bind:value={sectionBgColor} placeholder="#262626"
-                style="flex:1" onchange={saveBg} />
-            </div>
-          {/if}
-          <label class="form-label" style="display:flex;justify-content:space-between">
-            <span>Card opacity</span>
-            <strong style="min-width:34px;text-align:right">{sectionBgOpacity}%</strong>
-          </label>
-          <input type="range" min="0" max="100" step="1" bind:value={sectionBgOpacity}
-            style="width:100%;accent-color:var(--accent);margin-top:0.35rem"
-            onchange={saveBg} />
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
-            <span>0% (invisible)</span><span>93% (default)</span><span>100% (solid)</span>
-          </div>
-        </div>
       </div>
     {/if}
   </div>
+
+  <!-- Section Cards -->
+  {#if profileBgType !== 'none'}
+  <div class="card" style="margin-bottom:1rem">
+    <p class="section-title">Section Cards</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Control how the content cards look against your background.</p>
+
+    <div class="form-group">
+      <label class="form-label" style="margin-bottom:0.4rem">Card color</label>
+      <div style="display:flex;gap:0.4rem;margin-bottom:0.75rem">
+        <button type="button"
+          class="btn btn-sm {sectionBgColor === null ? 'btn-primary' : 'btn-ghost'}"
+          onclick={() => { sectionBgColor = null; saveBg(); }}>
+          Theme default
+        </button>
+        <button type="button"
+          class="btn btn-sm {sectionBgColor !== null ? 'btn-primary' : 'btn-ghost'}"
+          onclick={() => { if (sectionBgColor === null) sectionBgColor = '#262626'; }}>
+          Custom color
+        </button>
+      </div>
+      {#if sectionBgColor !== null}
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+          <input type="color" bind:value={sectionBgColor}
+            style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none"
+            onchange={saveBg} />
+          <input type="text" bind:value={sectionBgColor} placeholder="#262626"
+            style="flex:1" onchange={saveBg} />
+        </div>
+      {/if}
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" style="display:flex;justify-content:space-between">
+        <span>Card opacity</span>
+        <strong style="min-width:34px;text-align:right">{sectionBgOpacity}%</strong>
+      </label>
+      <input type="range" min="0" max="100" step="1" bind:value={sectionBgOpacity}
+        style="width:100%;accent-color:var(--accent);margin-top:0.35rem"
+        onchange={saveBg} />
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
+        <span>0% (invisible)</span><span>30% (blur default)</span><span>100% (solid)</span>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:0">
+      <label style="display:flex;gap:0.6rem;align-items:flex-start;cursor:pointer;user-select:none">
+        <input type="checkbox" bind:checked={sectionBlur} style="width:auto;margin-top:2px;flex-shrink:0" onchange={saveBg} />
+        <span>
+          <strong style="display:block;margin-bottom:0.15rem">Frosted glass blur</strong>
+          <span style="color:var(--text-muted);font-size:12px">Blurs the background behind each card. Works best with a lower card opacity.</span>
+        </span>
+      </label>
+      {#if sectionBlur}
+        <div style="margin-top:0.75rem">
+          <label class="form-label" style="display:flex;justify-content:space-between">
+            <span>Blur intensity</span><strong style="min-width:34px;text-align:right">{sectionBlurAmount}px</strong>
+          </label>
+          <input type="range" min="0" max="40" step="1" bind:value={sectionBlurAmount}
+            style="width:100%;accent-color:var(--accent);margin-top:0.35rem" onchange={saveBg} />
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
+            <span>0 (none)</span><span>8 (default)</span><span>40 (heavy)</span>
+          </div>
+        </div>
+      {/if}
+    </div>
+  </div>
+  {/if}
 
   <!-- Layout -->
   <div class="card" style="margin-bottom:1rem">

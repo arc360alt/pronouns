@@ -583,14 +583,20 @@ button.pref-btn:hover { opacity: 1; background: none; }
   border-radius: var(--radius);
   padding: 0.35rem 1rem;
 }
-/* Optional frosted-glass blur behind sections */
-.has-section-blur .card,
-.has-section-blur .profile-section {
+/* Frosted glass — drop default opacity so the blur actually shows through */
+.has-profile-bg.has-section-blur .card,
+.has-profile-bg.has-section-blur .profile-section {
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) var(--section-card-alpha, 30%), transparent);
   backdrop-filter: blur(var(--section-blur, 8px));
   -webkit-backdrop-filter: blur(var(--section-blur, 8px));
 }
-.has-section-blur .profile-identity,
-.has-section-blur .profile-divider {
+.has-profile-bg.has-section-blur .profile-identity {
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) var(--section-card-alpha, 25%), transparent);
+  backdrop-filter: blur(var(--section-blur, 8px));
+  -webkit-backdrop-filter: blur(var(--section-blur, 8px));
+}
+.has-profile-bg.has-section-blur .profile-divider {
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) var(--section-card-alpha, 20%), transparent);
   backdrop-filter: blur(var(--section-blur, 8px));
   -webkit-backdrop-filter: blur(var(--section-blur, 8px));
 }
