@@ -530,16 +530,19 @@ button.pref-btn:hover { opacity: 1; background: none; }
 
 /* Profile background system */
 /* backdrop-filter cannot see position:fixed elements on separate GPU layers.
-   Fix: make has-profile-bg itself the fixed compositor layer (position:fixed, inset:0).
-   The background (position:absolute) and content scroll (position:absolute) are both
-   INSIDE this layer — same compositor — so backdrop-filter on cards can see the
-   background video/image. Content scrolls via its own overflow-y:auto child. */
+   Fix: make has-profile-bg itself the fixed compositor layer. It starts below the navbar
+   so the navbar is never covered. The background (position:absolute) and content scroll
+   (position:absolute) are both INSIDE this layer — same compositor — so backdrop-filter
+   on cards can see the background video/image. Content scrolls inside the wrapper. */
 main.main-content:has(.has-profile-bg) {
   padding: 0;
 }
 .has-profile-bg {
   position: fixed;
-  inset: 0;
+  top: var(--nav-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: hidden;
 }
 .profile-bg-root {
@@ -551,10 +554,7 @@ main.main-content:has(.has-profile-bg) {
 }
 .has-profile-bg .profile-content-scroll {
   position: absolute;
-  top: var(--nav-height);
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
