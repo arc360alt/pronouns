@@ -325,7 +325,7 @@
     <!-- Header: avatar row + identity row -->
     <div class="container">
       <!-- When banner is hidden, pad from top instead of overlapping the banner -->
-      <div class="profile-header" style="margin-top:{hideBanner ? '4rem' : -avatarSizePx / 2 + 'px'};{hideBanner ? 'margin-bottom:1.25rem' : ''}">
+      <div class="profile-header" style="margin-top:{hideBanner ? '2.5rem' : -avatarSizePx / 2 + 'px'};{hideBanner ? 'margin-bottom:1.25rem' : ''}">
         {#if profile.profile_picture}
           {#if isVideo(profile.profile_picture)}
             <video src={profile.profile_picture} autoplay loop muted playsinline
