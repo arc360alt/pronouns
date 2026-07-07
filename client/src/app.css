@@ -630,6 +630,15 @@ main.main-content:has(.has-profile-bg) {
 .has-profile-bg.has-section-blur .profile-link-btn {
   background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) min(100%, calc(var(--section-card-alpha, 30%) + 5%)), transparent);
 }
+/* Image and flag cards are +5% more opaque than section cards */
+.has-profile-bg .image-card,
+.has-profile-bg .flag-card {
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) min(100%, calc(var(--section-card-alpha, 93%) + 5%)), transparent);
+}
+.has-profile-bg.has-section-blur .image-card,
+.has-profile-bg.has-section-blur .flag-card {
+  background: color-mix(in srgb, var(--section-card-color, var(--bg-card)) min(100%, calc(var(--section-card-alpha, 30%) + 5%)), transparent);
+}
 
 /* Keep old class names as no-ops so old CSS in profile page doesn't break */
 .profile-bg-fixed {
