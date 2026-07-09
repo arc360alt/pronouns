@@ -100,6 +100,7 @@ export interface Profile {
   section_blur_amount: number;
   section_bg_color: string | null;
   section_bg_opacity: number | null;
+  section_labels: string | null;
   show_friends: boolean | number;
   show_site: boolean | number;
   site_enabled: boolean | number;

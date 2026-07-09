@@ -47,6 +47,20 @@ router.put('/section-order', requireAuth, (req, res) => {
   return res.json({ ok: true });
 });
 
+router.put('/section-labels', requireAuth, (req, res) => {
+  const { section_labels } = req.body;
+  if (typeof section_labels !== 'object' || section_labels === null) return res.status(400).json({ error: 'Invalid section_labels' });
+  const allowed = ['info', 'bio', 'names', 'flags', 'images', 'links', 'clock', 'friends'];
+  const sanitized: Record<string, string> = {};
+  for (const key of allowed) {
+    if (typeof section_labels[key] === 'string') {
+      sanitized[key] = section_labels[key].slice(0, 64).trim();
+    }
+  }
+  db.prepare('UPDATE profiles SET section_labels = ? WHERE user_id = ?').run(JSON.stringify(sanitized), req.user!.id);
+  return res.json({ ok: true });
+});
+
 router.put('/background', requireAuth, (req, res) => {
   const { profile_bg, profile_bg_type, profile_bg_brightness, hide_banner_with_bg, section_blur, section_blur_amount, section_bg_color, section_bg_opacity } = req.body;
   const allowed = ['none', 'color', 'gradient', 'image', 'video', 'youtube'];

@@ -11,6 +11,14 @@
 
   const isVideo = (url?: string | null) => !!(url && url.toLowerCase().endsWith('.mp4'));
 
+  function sectionLabel(sid: string, fallback: string): string {
+    if (!profile?.section_labels) return fallback;
+    try {
+      const labels = JSON.parse(profile.section_labels) as Record<string, string>;
+      return labels[sid]?.trim() || fallback;
+    } catch { return fallback; }
+  }
+
   function extractYouTubeId(url: string): string | null {
     if (!url) return null;
     const m = /(?:v=|youtu\.be\/|embed\/|shorts\/)([a-zA-Z0-9_-]{11})/.exec(url);
@@ -374,7 +382,7 @@
       </div>
 
       <!-- Section divider -->
-      <div class="profile-divider"><span>Info</span></div>
+      <div class="profile-divider"><span>{sectionLabel('info', 'Info')}</span></div>
 
       {#if isOwnProfile && sectionOrder.some(id => sectionVisible(id))}
         <p class="drag-hint"><i class="fa-solid fa-grip-vertical"></i> Drag sections to reorder</p>
@@ -401,6 +409,9 @@
             {/if}
 
             {#if sid === 'names'}
+              {#if sectionLabel('names', '')}
+                <p class="section-title">{sectionLabel('names', '')}</p>
+              {/if}
               <div class="tag-list">
                 {#each profile.names as n}
                   <span class="badge">
@@ -412,11 +423,14 @@
               </div>
 
             {:else if sid === 'bio'}
+              {#if sectionLabel('bio', '')}
+                <p class="section-title">{sectionLabel('bio', '')}</p>
+              {/if}
               <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
               <div class="profile-bio bio-content" onclick={interceptBioLink}>{@html renderMarkdown(profile.bio ?? '')}</div>
 
             {:else if sid === 'flags'}
-              <p class="section-title">Flags</p>
+              <p class="section-title">{sectionLabel('flags', 'Flags')}</p>
               <div class="flags-grid">
                 {#each profile.flags as flag}
                   <div class="flag-card">
@@ -431,7 +445,7 @@
               </div>
 
             {:else if sid === 'images'}
-              <p class="section-title">Images</p>
+              <p class="section-title">{sectionLabel('images', 'Images')}</p>
               <div class="images-grid">
                 {#each profile.images as img}
                   <div class="image-card" onclick={() => { lightboxSrc = img.image_url; lightboxCaption = img.caption; }}>
@@ -442,7 +456,7 @@
               </div>
 
             {:else if sid === 'links'}
-              <p class="section-title">Links</p>
+              <p class="section-title">{sectionLabel('links', 'Links')}</p>
               {#if profile.links.length > 0}
                 <div class="tag-list">
                   {#each profile.links as link}
@@ -476,12 +490,12 @@
               {/if}
 
             {:else if sid === 'clock'}
-              <p class="section-title"><i class="fa-regular fa-clock accent-icon"></i> Current time</p>
+              <p class="section-title"><i class="fa-regular fa-clock accent-icon"></i> {sectionLabel('clock', 'Current time')}</p>
               <div class="clock-display">{currentTime}</div>
               <div class="clock-tz">{profile.timezone!.replace(/_/g, ' ')}</div>
 
             {:else if sid === 'friends'}
-              <p class="section-title">Friends</p>
+              <p class="section-title">{sectionLabel('friends', 'Friends')}</p>
               <div class="friends-list">
                 {#each profile.friends as f}
                   {#if /^[a-zA-Z0-9_-]+$/.test(f.friend_username)}

@@ -225,6 +225,12 @@
   let sectionBgOpacity = $state(93);
   let profileBgUploading = $state(false);
 
+  const SECTION_LABEL_KEYS = ['info', 'bio', 'names', 'flags', 'images', 'links', 'clock', 'friends'] as const;
+  const SECTION_LABEL_DEFAULTS: Record<string, string> = { info: 'Info', bio: '', names: '', flags: 'Flags', images: 'Images', links: 'Links', clock: 'Current time', friends: 'Friends' };
+  let sectionLabels = $state<Record<string, string>>({ info: '', bio: '', names: '', flags: '', images: '', links: '', clock: '', friends: '' });
+  let sectionLabelsSaving = $state(false);
+  let sectionLabelsSaved = $state(false);
+
   function extractYouTubeId(url: string): string | null {
     if (!url) return null;
     const m = /(?:v=|youtu\.be\/|embed\/|shorts\/)([a-zA-Z0-9_-]{11})/.exec(url);
@@ -298,6 +304,12 @@
         newEntryStatuses[f.id] = '';
       });
       badges = data.badges || [];
+      if (data.section_labels) {
+        try {
+          const loaded = JSON.parse(data.section_labels as string) as Record<string, string>;
+          for (const k of SECTION_LABEL_KEYS) sectionLabels[k] = loaded[k] ?? '';
+        } catch {}
+      }
     } catch { /* ignore */ }
     finally { loading = false; }
   });
@@ -715,6 +727,16 @@
   async function onBadgeDragEnd() {
     badgeDragId = null;
     await api.put('/api/profile/badges/order', { order: badges.map(b => b.id) });
+  }
+
+  async function saveSectionLabels() {
+    sectionLabelsSaving = true;
+    try {
+      await api.put('/api/profile/section-labels', { section_labels: sectionLabels });
+      sectionLabelsSaved = true;
+      setTimeout(() => { sectionLabelsSaved = false; }, 2000);
+    } catch {}
+    finally { sectionLabelsSaving = false; }
   }
 
   let activeTab = $state<'profile' | 'appearance' | 'content' | 'social'>('profile');
@@ -1179,6 +1201,32 @@
 
   <!-- ════════════════ CONTENT TAB ════════════════ -->
   {:else if activeTab === 'content'}
+
+  <!-- Section Labels -->
+  <div class="card" style="margin-bottom:1rem">
+    <p class="section-title">Section Labels</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Rename the default section headers on your profile. Leave blank to use the default name.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+      {#each [
+        { key: 'info',    label: 'Info divider',  placeholder: 'Info' },
+        { key: 'bio',     label: 'Description',   placeholder: 'About' },
+        { key: 'names',   label: 'Names',         placeholder: 'Names' },
+        { key: 'flags',   label: 'Pride Flags',   placeholder: 'Flags' },
+        { key: 'images',  label: 'Images',        placeholder: 'Images' },
+        { key: 'links',   label: 'Links',         placeholder: 'Links' },
+        { key: 'clock',   label: 'Clock',         placeholder: 'Current time' },
+        { key: 'friends', label: 'Friends',       placeholder: 'Friends' },
+      ] as s}
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">{s.label}</label>
+          <input type="text" maxlength="64" placeholder={s.placeholder} bind:value={sectionLabels[s.key]} />
+        </div>
+      {/each}
+    </div>
+    <button class="btn btn-primary btn-sm" onclick={saveSectionLabels} disabled={sectionLabelsSaving}>
+      {sectionLabelsSaved ? 'Saved!' : sectionLabelsSaving ? 'Saving…' : 'Save labels'}
+    </button>
+  </div>
 
   <!-- Names -->
   <div class="card" style="margin-bottom:1rem">
