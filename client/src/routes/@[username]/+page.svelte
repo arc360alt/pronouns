@@ -164,11 +164,18 @@
 
   function formatBirthday(raw: string): string {
     try {
-      const d = new Date(raw + 'T00:00:00Z');
+      let m: number, day: number, y: number;
+      if (raw.includes('/')) {
+        const parts = raw.split('/');
+        m = parseInt(parts[0]); day = parseInt(parts[1]); y = parseInt(parts[2]);
+      } else {
+        const parts = raw.split('-');
+        y = parseInt(parts[0]); m = parseInt(parts[1]); day = parseInt(parts[2]);
+      }
+      if (isNaN(m) || isNaN(day) || isNaN(y)) return raw;
+      const d = new Date(Date.UTC(y, m - 1, day));
       const month = new Intl.DateTimeFormat('en', { month: 'long', timeZone: 'UTC' }).format(d);
-      const day = ordinal(d.getUTCDate());
-      const year = d.getUTCFullYear();
-      return `${month} ${day}, ${year}`;
+      return `${month} ${ordinal(day)}, ${y}`;
     } catch { return raw; }
   }
 

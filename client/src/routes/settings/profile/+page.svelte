@@ -804,7 +804,7 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="birthday">Birthday</label>
-          <input id="birthday" type="date" bind:value={birthday} />
+          <input id="birthday" type="text" bind:value={birthday} placeholder="MM/DD/YYYY" maxlength="10" />
         </div>
         <div class="form-group">
           <label class="form-label" for="website">Website</label>
