@@ -1090,7 +1090,7 @@
           <span>Background brightness</span><strong>{Math.round(profileBgBrightness * 100)}%</strong>
         </label>
         <input type="range" min="0" max="1" step="0.05" bind:value={profileBgBrightness}
-          style="width:100%;accent-color:var(--accent);margin-top:0.35rem" />
+          style="width:100%;accent-color:var(--accent);margin-top:0.35rem" onchange={saveBg} />
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:2px">
           <span>0% (dark)</span><span>50% (default)</span><span>100% (full)</span>
         </div>
