@@ -102,6 +102,8 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Username must be 3–30 characters' });
   if (!/^[a-zA-Z0-9_-]+$/.test(username))
     return res.status(400).json({ error: 'Username can only contain letters, numbers, _ and -' });
+  if (['ark', 'arc360', 'ark360'].includes(username.toLowerCase()))
+    return res.status(400).json({ error: 'This username has been reserved by the owner' });
   if (password.length < 8)
     return res.status(400).json({ error: 'Password must be at least 8 characters' });
 
@@ -255,6 +257,8 @@ router.put('/username', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Username must be 3–30 characters' });
   if (!/^[a-zA-Z0-9_-]+$/.test(username))
     return res.status(400).json({ error: 'Username can only contain letters, numbers, _ and -' });
+  if (['ark', 'arc360', 'ark360'].includes(username.toLowerCase()))
+    return res.status(400).json({ error: 'This username has been reserved by the owner' });
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user!.id) as Record<string, unknown>;
 
