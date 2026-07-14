@@ -66,7 +66,7 @@
 
 <footer class="footer">
   <div class="container">
-    pronouns · an app by nyx · <a href="https://github.com/arc360alt/pronouns" target="_blank" rel="noopener">Github</a>
+    pronouns · an app by nyx · <a href="https://nyxdev.app/gh/pronouns" target="_blank" rel="noopener">Github</a>
     {#if memberCount !== null}
        |  <strong>{memberCount.toLocaleString()}</strong> {memberCount === 1 ? 'member' : 'members'}
     {/if}
