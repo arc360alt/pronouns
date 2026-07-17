@@ -51,6 +51,8 @@ app.use('/api/site', siteRoutes);
 app.use('/api/sitebuilder', sitebuildRoutes);
 app.use('/sites', sitebuildPublic);
 
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+
 // --- Bot / embed middleware ---
 const BOT_UA_PATTERNS = ['discordbot', 'twitterbot', 'facebookexternalhit', 'slackbot', 'telegrambot', 'whatsapp', 'linkedinbot', 'mastodon', 'iframely', 'embedly', 'bingbot', 'googlebot', 'applebot', 'pinterest'];
 
