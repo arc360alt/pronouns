@@ -720,6 +720,32 @@ main.main-content:has(.has-profile-bg) {
 .profile-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem 1rem; margin-top: 0.5rem; font-size: 14px; color: var(--text-muted); }
 
 .badge-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; margin-top: 0.65rem; }
+.profile-like-row { display: flex; justify-content: center; margin-top: 0.75rem; gap: 0.5rem; flex-wrap: wrap; }
+.profile-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.profile-like-btn:hover:not(:disabled) {
+  color: #e05a7a;
+  border-color: #e05a7a;
+  background: color-mix(in srgb, #e05a7a 10%, transparent);
+}
+.profile-like-btn.liked {
+  color: #e05a7a;
+  border-color: #e05a7a;
+  background: color-mix(in srgb, #e05a7a 12%, transparent);
+}
+.profile-like-btn:disabled { opacity: 0.6; cursor: default; }
 .profile-badge {
   display: inline-flex;
   align-items: center;

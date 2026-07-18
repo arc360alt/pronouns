@@ -41,6 +41,10 @@
   let linkWarningOpen = $state(false);
   let pendingLink = $state('');
 
+  let likeCount = $state(0);
+  let likedByMe = $state(false);
+  let likeLoading = $state(false);
+
   function interceptBioLink(e: MouseEvent) {
     const a = (e.target as HTMLElement).closest('a');
     if (!a) return;
@@ -219,6 +223,11 @@
           : c;
         customStyle = `--accent:${c};--accent-hover:${c};--accent-subtle:${subtle};--accent-bg:${accentBg};`;
       }
+      try {
+        const likes = await api.get<{ count: number; liked_by_me: boolean }>(`/api/users/${username}/likes`);
+        likeCount = likes.count;
+        likedByMe = likes.liked_by_me;
+      } catch { /* non-critical */ }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (msg.includes('suspended')) banned = true;
@@ -227,6 +236,18 @@
       loading = false;
     }
   });
+
+  async function toggleLike() {
+    if (!profile || likeLoading) return;
+    likeLoading = true;
+    try {
+      const res = await api.post<{ liked: boolean; count: number }>(`/api/users/${profile.username}/like`, {});
+      likedByMe = res.liked;
+      likeCount = res.count;
+    } catch { /* ignore */ } finally {
+      likeLoading = false;
+    }
+  }
 
   async function submitReport(e: Event) {
     e.preventDefault();
@@ -383,9 +404,21 @@
             {/each}
           </div>
         {/if}
-        {#if isOwnProfile}
-          <a href="/settings/profile" class="btn btn-secondary btn-sm" style="margin-top:0.75rem;display:inline-block">Edit profile</a>
-        {/if}
+        <div class="profile-like-row">
+          {#if isOwnProfile}
+            <a href="/settings/profile" class="btn btn-secondary btn-sm">Edit profile</a>
+          {:else}
+            <button
+              class="profile-like-btn {likedByMe ? 'liked' : ''}"
+              onclick={toggleLike}
+              disabled={likeLoading || !$user}
+              title={$user ? (likedByMe ? 'Unlike profile' : 'Like profile') : 'Log in to like profiles'}
+            >
+              <i class="fa-{likedByMe ? 'solid' : 'regular'} fa-heart"></i>
+              {likeCount}
+            </button>
+          {/if}
+        </div>
       </div>
 
       <!-- Section divider -->

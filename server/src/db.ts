@@ -133,6 +133,16 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS profile_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_user_id INTEGER NOT NULL,
+    liker_user_id INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(profile_user_id, liker_user_id),
+    FOREIGN KEY (profile_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (liker_user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `);
 
 // Migrate existing databases to add new columns gracefully
