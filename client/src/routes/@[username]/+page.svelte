@@ -202,6 +202,51 @@
     }
   });
 
+  function hexLum(hex: string): number | null {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    if (!m) return null;
+    const lin = (x: number) => x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+    return 0.2126 * lin(parseInt(m[1], 16) / 255)
+         + 0.7152 * lin(parseInt(m[2], 16) / 255)
+         + 0.0722 * lin(parseInt(m[3], 16) / 255);
+  }
+
+  function bgTextContrast(data: Profile): string {
+    if (!data.profile_bg || data.profile_bg_type === 'none') return '';
+
+    const brightness = data.profile_bg_brightness ?? 0.5;
+    // Effective card opacity: use stored value, or CSS defaults (30% for blur, 93% otherwise)
+    const cardOpacity = data.section_bg_opacity != null
+      ? data.section_bg_opacity / 100
+      : (data.section_blur ? 0.30 : 0.93);
+
+    // Background luminance before overlay
+    let bgLum: number;
+    if (data.profile_bg_type === 'color') {
+      bgLum = hexLum(data.profile_bg) ?? 0.05;
+    } else if (data.profile_bg_type === 'gradient') {
+      const firstHex = /#([0-9a-f]{6})/i.exec(data.profile_bg);
+      bgLum = firstHex ? (hexLum('#' + firstHex[1]) ?? 0.05) : 0.05;
+    } else {
+      // Image / video / youtube: assume average mid-bright photo luminance
+      bgLum = 0.4;
+    }
+
+    // Apply dark overlay (brightness slider)
+    bgLum *= brightness;
+
+    // Card color contribution to what the eye actually sees
+    const cardLum = data.section_bg_color ? (hexLum(data.section_bg_color) ?? 0.05) : 0.05;
+    const effectiveLum = bgLum * (1 - cardOpacity) + cardLum * cardOpacity;
+
+    if (effectiveLum > 0.18) {
+      // Light background showing through → force dark text for readability
+      return '--text:#111111;--text-muted:rgba(20,20,20,0.72);--border:rgba(0,0,0,0.14);';
+    }
+    // Dark background → theme's default light text is already fine
+    return '';
+  }
+
   async function loadProfile(username: string) {
     // Reset state for new profile
     profile = null;
@@ -235,6 +280,7 @@
           : c;
         customStyle = `--accent:${c};--accent-hover:${c};--accent-subtle:${subtle};--accent-bg:${accentBg};`;
       }
+      customStyle += bgTextContrast(data);
       try {
         const likes = await api.get<{ count: number; liked_by_me: boolean }>(`/api/users/${username}/likes`);
         likeCount = likes.count;
