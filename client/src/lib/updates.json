@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.7.0",
+    "date": "2026-08-14",
+    "title": "Likes, Section Labels & UI Refresh",
+    "changes": [
+      "Added profile like button — logged-in users can heart any profile (not their own), count is shown publicly and toggles on click",
+      "Custom section labels — rename Flags, Images, Links, Friends, Current time, Info and other sections to anything you want from settings",
+      "Fixed profile navigation in SPA mode — clicking @username links now loads the new profile without a full page refresh",
+      "Fixed friends section @username links — entries stored with a leading @ now route correctly, new entries strip the prefix on save",
+      "Fixed background brightness slider not saving",
+      "Fixed birthday display — replaced date picker with a MM/DD/YYYY text field, eliminating timezone-related day offsets",
+      "Image gallery no longer leaves a large empty gap when the last row has fewer cards",
+      "Added GET /api/health status endpoint",
+      "UI refresh — new cyan accent, card shadows, 8px radius, heavier headings, stronger navbar blur"
+    ]
+  },
+  {
     "version": "1.6.0",
     "date": "2026-07-07",
     "title": "Icon Links, Section Blur & Tabbed Editor",

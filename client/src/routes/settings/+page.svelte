@@ -3,6 +3,7 @@
   import { api } from '$lib/api';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import { ACCENT_PRESETS, DEFAULT_ACCENT, saveAccent } from '$lib/accent';
 
   let email = $state('');
   let currentPassword = $state('');
@@ -22,12 +23,20 @@
   let googleLinkBtnContainer: HTMLDivElement;
   let googleLinking = $state(false);
 
+  let accentColor = $state(DEFAULT_ACCENT);
+
+  function pickAccent(hex: string) {
+    accentColor = hex;
+    saveAccent(hex);
+  }
+
   onMount(async () => {
     const me = await waitForUser();
     if (!me) { goto('/login'); return; }
     email = me.email;
     newUsername = me.username;
     calcCooldown(me.username_changed_at);
+    accentColor = localStorage.getItem('accent_color') || DEFAULT_ACCENT;
 
     try {
       const cfg = await api.get<{ googleClientId: string | null }>('/api/auth/config');
@@ -225,6 +234,35 @@
       {/if}
     </div>
   {/if}
+
+  <!-- Appearance -->
+  <div class="card" style="margin-top:1rem">
+    <p class="section-title" style="margin-bottom:0.25rem">Appearance</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Choose an accent color for the site. Applies only to your browser.</p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem">
+      {#each ACCENT_PRESETS as preset}
+        <button
+          onclick={() => pickAccent(preset.hex)}
+          title={preset.name}
+          style="width:32px;height:32px;border-radius:50%;background:{preset.hex};border:3px solid {accentColor === preset.hex ? 'var(--text)' : 'transparent'};outline:2px solid {accentColor === preset.hex ? preset.hex : 'transparent'};outline-offset:1px;cursor:pointer;transition:transform 0.1s,border-color 0.1s;"
+          onmouseenter={(e) => (e.currentTarget as HTMLElement).style.transform = 'scale(1.15)'}
+          onmouseleave={(e) => (e.currentTarget as HTMLElement).style.transform = 'scale(1)'}
+        ></button>
+      {/each}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+      <label style="font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+        Custom color
+        <input type="color" value={accentColor} oninput={(e) => pickAccent((e.target as HTMLInputElement).value)}
+          style="width:36px;height:28px;padding:2px;cursor:pointer;border-radius:4px;border:1px solid var(--border);background:var(--bg-input)" />
+      </label>
+      {#if accentColor !== DEFAULT_ACCENT}
+        <button class="btn btn-ghost btn-sm" onclick={() => pickAccent(DEFAULT_ACCENT)}>Reset to default</button>
+      {/if}
+    </div>
+  </div>
 
   <!-- Session -->
   <div class="card" style="margin-top:1rem">

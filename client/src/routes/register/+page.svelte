@@ -18,9 +18,16 @@
   let googleClientId = $state('');
   let googleBtnContainer: HTMLDivElement;
   let googleLoading = $state(false);
+  let turnstileEnabled = $state(true);
 
   onMount(async () => {
-    if (captchaContainer) {
+    try {
+      const cfg = await api.get<{ googleClientId: string | null; turnstileEnabled: boolean }>('/api/auth/config');
+      if (cfg.googleClientId) googleClientId = cfg.googleClientId;
+      turnstileEnabled = cfg.turnstileEnabled ?? true;
+    } catch { /* no config */ }
+
+    if (turnstileEnabled && captchaContainer) {
       function renderCaptcha() {
         if (typeof turnstile !== 'undefined' && captchaContainer) {
           try {
@@ -36,13 +43,6 @@
       }
       renderCaptcha();
     }
-
-    try {
-      const cfg = await api.get<{ googleClientId: string | null }>('/api/auth/config');
-      if (cfg.googleClientId) {
-        googleClientId = cfg.googleClientId;
-      }
-    } catch { /* no google config */ }
   });
 
   function handleGoogleCredential(response: { credential: string }) {
@@ -80,7 +80,7 @@
     e.preventDefault();
     error = '';
 
-    if (siteKey && !captchaToken) {
+    if (turnstileEnabled && !captchaToken) {
       error = 'Please complete the captcha';
       return;
     }
@@ -125,9 +125,11 @@
         <input id="password" type="password" bind:value={password} autocomplete="new-password"
           placeholder="at least 8 characters" required minlength="8" />
       </div>
+      {#if turnstileEnabled}
       <div class="form-group" style="display:flex;justify-content:center">
         <div bind:this={captchaContainer}></div>
       </div>
+      {/if}
       {#if error}<p class="msg-error">{error}</p>{/if}
       <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem" disabled={loading}>
         {loading ? 'Creating account…' : 'Create account'}

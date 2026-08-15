@@ -178,6 +178,8 @@ addCol('profile_links', 'link_icon', 'TEXT DEFAULT NULL');
 addCol('profile_links', 'link_icon_mode', "TEXT NOT NULL DEFAULT 'text'");
 addCol('profile_links', 'link_icon_size', 'REAL DEFAULT 1.5');
 addCol('profiles', 'section_labels', 'TEXT DEFAULT NULL');
+addCol('profiles', 'content_align', "TEXT NOT NULL DEFAULT 'default'");
+try { db.exec("UPDATE profiles SET content_align = 'default' WHERE content_align = 'center'"); } catch { /* ignore */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS site_settings (
@@ -279,7 +281,7 @@ export function getFullProfile(userId: number) {
            p.profile_picture, p.banner, p.banner_position, p.custom_color, p.show_friends,
            p.location, p.occupation, p.birthday, p.website, p.timezone,
            p.banner_height, p.avatar_size, p.show_site, p.section_order,
-           p.profile_bg, p.profile_bg_type, p.profile_bg_brightness, p.hide_banner_with_bg, p.custom_color_2, p.custom_color_dir, p.forced_theme, p.section_blur, p.section_blur_amount, p.section_bg_color, p.section_bg_opacity, p.section_labels,
+           p.profile_bg, p.profile_bg_type, p.profile_bg_brightness, p.hide_banner_with_bg, p.custom_color_2, p.custom_color_dir, p.forced_theme, p.section_blur, p.section_blur_amount, p.section_bg_color, p.section_bg_opacity, p.section_labels, p.content_align,
            CASE WHEN s.enabled = 1 THEN 1 ELSE 0 END AS site_enabled
     FROM users u
     LEFT JOIN profiles p ON u.id = p.user_id

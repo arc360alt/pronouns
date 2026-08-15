@@ -13,20 +13,22 @@ router.get('/', requireAuth, (req, res) => {
 router.put('/', requireAuth, (req, res) => {
   const { display_name, bio, gender, pronouns, custom_color, custom_color_2, custom_color_dir,
           show_friends, location, occupation, birthday, website, timezone,
-          banner_height, avatar_size, show_site, forced_theme } = req.body;
+          banner_height, avatar_size, show_site, forced_theme, content_align } = req.body;
   const clamp = (v: unknown, min: number, max: number, def: number) => {
     const n = parseInt(v as string);
     return isNaN(n) ? def : Math.min(max, Math.max(min, n));
   };
   const allowedThemes = ['dark', 'light'];
   const theme = allowedThemes.includes(forced_theme) ? forced_theme : null;
+  const align = ['left', 'center', 'default'].includes(content_align) ? content_align : 'default';
   db.prepare(`
     UPDATE profiles SET
       display_name = ?, bio = ?, gender = ?, pronouns = ?,
       custom_color = ?, custom_color_2 = ?, custom_color_dir = ?,
       show_friends = ?,
       location = ?, occupation = ?, birthday = ?, website = ?, timezone = ?,
-      banner_height = ?, avatar_size = ?, show_site = ?, forced_theme = ?
+      banner_height = ?, avatar_size = ?, show_site = ?, forced_theme = ?,
+      content_align = ?
     WHERE user_id = ?
   `).run(
     display_name || null, bio || null, gender || null, pronouns || null,
@@ -35,6 +37,7 @@ router.put('/', requireAuth, (req, res) => {
     location || null, occupation || null, birthday || null, website || null, timezone || null,
     clamp(banner_height, 100, 400, 240), clamp(avatar_size, 60, 180, 120),
     show_site ? 1 : 0, theme,
+    align,
     req.user!.id
   );
   return res.json({ message: 'Profile updated' });
@@ -164,11 +167,12 @@ router.delete('/images/:id', requireAuth, (req, res) => {
 router.post('/friends', requireAuth, (req, res) => {
   const { friend_username } = req.body;
   if (!friend_username?.trim()) return res.status(400).json({ error: 'Name is required' });
+  const friend_username_clean = friend_username.trim().replace(/^@/, '');
   try {
     const result = db.prepare(
       'INSERT INTO friends (user_id, friend_username) VALUES (?, ?)'
-    ).run(req.user!.id, friend_username.trim());
-    return res.status(201).json({ id: result.lastInsertRowid, friend_username: friend_username.trim() });
+    ).run(req.user!.id, friend_username_clean);
+    return res.status(201).json({ id: result.lastInsertRowid, friend_username: friend_username_clean });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '';
     if (msg.includes('UNIQUE constraint')) return res.status(409).json({ error: 'Already in list' });

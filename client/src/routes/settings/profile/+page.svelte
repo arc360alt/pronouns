@@ -34,6 +34,7 @@
   let siteEnabled = $state(false);
   let bannerHeight = $state(240);
   let avatarSize = $state(120);
+  let contentAlign = $state<'default' | 'center' | 'left'>('default');
   let profilePicture = $state('');
   let banner = $state('');
   let bannerPosition = $state('50% 50%');
@@ -286,6 +287,7 @@
       siteEnabled = !!data.site_enabled;
       bannerHeight = data.banner_height ?? 240;
       avatarSize = data.avatar_size ?? 120;
+      contentAlign = (data.content_align as 'default' | 'center' | 'left') || 'default';
       profilePicture = data.profile_picture || '';
       banner = data.banner || '';
       bannerPosition = data.banner_position || '50% 50%';
@@ -327,7 +329,8 @@
         custom_color_dir: customColorDir,
         forced_theme: forcedTheme || null,
         show_friends: showFriends, show_site: showSite,
-        banner_height: bannerHeight, avatar_size: avatarSize
+        banner_height: bannerHeight, avatar_size: avatarSize,
+        content_align: contentAlign
       });
       basicMsg = '✓ Saved';
       setTimeout(() => basicMsg = '', 3000);
@@ -1169,6 +1172,25 @@
   <!-- Layout -->
   <div class="card" style="margin-bottom:1rem">
     <p class="section-title">Layout</p>
+    <div class="form-group">
+      <label class="form-label">Content alignment</label>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+        {#each [
+          { val: 'default', label: 'Default', icon: 'fa-align-justify', desc: 'Header centered, content left' },
+          { val: 'center',  label: 'Center',  icon: 'fa-align-center',  desc: 'Everything centered' },
+          { val: 'left',    label: 'Left',    icon: 'fa-align-left',    desc: 'Everything left' },
+        ] as opt}
+          <button type="button" class="btn btn-sm {contentAlign === opt.val ? 'btn-primary' : 'btn-ghost'}"
+            onclick={() => contentAlign = opt.val as 'default' | 'center' | 'left'}
+            title={opt.desc}>
+            <i class="fa-solid {opt.icon}"></i> {opt.label}
+          </button>
+        {/each}
+      </div>
+      <small style="font-size:12px;color:var(--text-muted);margin-top:0.35rem;display:block">
+        {#if contentAlign === 'default'}Header and identity centered, section content left-aligned{:else if contentAlign === 'center'}All content centered{:else}All content left-aligned{/if}
+      </small>
+    </div>
     <div class="form-group">
       <label class="form-label" for="banner-height">
         Banner height — <strong>{bannerHeight}px</strong>

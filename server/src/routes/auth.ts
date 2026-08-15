@@ -33,6 +33,7 @@ function userResponse(user: Record<string, unknown>) {
 // --- Turnstile ---
 
 async function verifyCaptcha(token: string): Promise<boolean> {
+  if (process.env.TURNSTILE === 'false') return true;
   const secret = process.env.TURNSTILE_SECRET;
   if (!secret) return true;
   try {
@@ -290,7 +291,10 @@ router.put('/username', requireAuth, async (req, res) => {
 // --- Public config ---
 
 router.get('/config', (_req, res) => {
-  res.json({ googleClientId: GOOGLE_CLIENT_ID() || null });
+  res.json({
+    googleClientId: GOOGLE_CLIENT_ID() || null,
+    turnstileEnabled: process.env.TURNSTILE !== 'false',
+  });
 });
 
 // --- Get current user ---

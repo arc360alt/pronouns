@@ -3,6 +3,7 @@
   import Navbar from '$lib/components/Navbar.svelte';
   import SiteBanner from '$lib/components/SiteBanner.svelte';
   import { user, theme, userReady, notifUnread } from '$lib/stores';
+  import { loadSavedAccent } from '$lib/accent';
   import { onMount, onDestroy } from 'svelte';
   import { api } from '$lib/api';
   import type { Snippet } from 'svelte';
@@ -27,6 +28,7 @@
     const saved = (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
     theme.set(saved);
     document.documentElement.setAttribute('data-theme', saved);
+    loadSavedAccent();
 
     try { bannerDismissed = sessionStorage.getItem('banner_dismissed') === '1'; } catch {}
 

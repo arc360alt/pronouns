@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { onMount, onDestroy } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { user, theme, forcedTheme as forcedThemeStore } from '$lib/stores';
   import { get } from 'svelte/store';
   import { api } from '$lib/api';
@@ -202,8 +202,21 @@
     }
   });
 
-  onMount(async () => {
-    const username = $page.params.username;
+  async function loadProfile(username: string) {
+    // Reset state for new profile
+    profile = null;
+    loading = true;
+    notFound = false;
+    banned = false;
+    likeCount = 0;
+    likedByMe = false;
+    customStyle = '';
+    // Restore theme before loading new profile in case previous had forced_theme
+    if (hadForcedTheme && typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', get(theme));
+      forcedThemeStore.set(null);
+      hadForcedTheme = false;
+    }
     try {
       const data = await api.get<Profile>(`/api/users/${username}`);
       profile = data;
@@ -214,7 +227,6 @@
       }
       if (data.custom_color) {
         const c = data.custom_color;
-        // Derive --accent-subtle from the custom hex so badge backgrounds use the right color
         let subtle = 'rgba(224,122,39,0.15)';
         const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c);
         if (m) subtle = `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},0.15)`;
@@ -235,6 +247,10 @@
     } finally {
       loading = false;
     }
+  }
+
+  $effect(() => {
+    loadProfile($page.params.username);
   });
 
   async function toggleLike() {
@@ -305,6 +321,7 @@
     class={[
       profile.profile_bg_type && profile.profile_bg_type !== 'none' ? 'has-profile-bg' : '',
       profile.section_blur && profile.profile_bg_type !== 'none' ? 'has-section-blur' : '',
+      profile.content_align === 'left' ? 'profile-align-left' : profile.content_align === 'center' ? 'profile-align-center' : '',
     ].join(' ')}
     style={[
       customStyle,
@@ -538,8 +555,9 @@
               <p class="section-title">{sectionLabel('friends', 'Friends')}</p>
               <div class="friends-list">
                 {#each profile.friends as f}
-                  {#if /^[a-zA-Z0-9_-]+$/.test(f.friend_username)}
-                    <a href="/@{f.friend_username}" class="badge">@{f.friend_username}</a>
+                  {@const uname = f.friend_username.replace(/^@/, '')}
+                  {#if /^[a-zA-Z0-9_-]+$/.test(uname)}
+                    <a href="/@{uname}" class="badge">@{uname}</a>
                   {:else}
                     <span class="badge">{f.friend_username}</span>
                   {/if}

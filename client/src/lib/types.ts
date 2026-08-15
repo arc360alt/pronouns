@@ -101,6 +101,7 @@ export interface Profile {
   section_bg_color: string | null;
   section_bg_opacity: number | null;
   section_labels: string | null;
+  content_align: 'default' | 'center' | 'left' | null;
   show_friends: boolean | number;
   show_site: boolean | number;
   site_enabled: boolean | number;
