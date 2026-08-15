@@ -215,35 +215,33 @@
     if (!data.profile_bg || data.profile_bg_type === 'none') return '';
 
     const brightness = data.profile_bg_brightness ?? 0.5;
-    // Effective card opacity: use stored value, or CSS defaults (30% for blur, 93% otherwise)
     const cardOpacity = data.section_bg_opacity != null
       ? data.section_bg_opacity / 100
       : (data.section_blur ? 0.30 : 0.93);
 
-    // Background luminance before overlay
-    let bgLum: number;
+    let bgLum: number | null = null;
+
     if (data.profile_bg_type === 'color') {
-      bgLum = hexLum(data.profile_bg) ?? 0.05;
+      const raw = hexLum(data.profile_bg);
+      if (raw !== null) bgLum = raw * brightness;
     } else if (data.profile_bg_type === 'gradient') {
-      const firstHex = /#([0-9a-f]{6})/i.exec(data.profile_bg);
-      bgLum = firstHex ? (hexLum('#' + firstHex[1]) ?? 0.05) : 0.05;
+      const m = /#([0-9a-f]{6})/i.exec(data.profile_bg);
+      if (m) { const raw = hexLum('#' + m[1]); if (raw !== null) bgLum = raw * brightness; }
     } else {
-      // Image / video / youtube: assume average mid-bright photo luminance
-      bgLum = 0.4;
+      // Image / video / youtube: pixel luminance is unknowable at runtime.
+      // Use forced_theme as a proxy: if the user forced light mode they likely have a light background.
+      if (data.forced_theme === 'light') bgLum = 0.5;
+      else return ''; // Can't determine — leave theme text colors untouched
     }
 
-    // Apply dark overlay (brightness slider)
-    bgLum *= brightness;
+    if (bgLum === null) return '';
 
-    // Card color contribution to what the eye actually sees
     const cardLum = data.section_bg_color ? (hexLum(data.section_bg_color) ?? 0.05) : 0.05;
     const effectiveLum = bgLum * (1 - cardOpacity) + cardLum * cardOpacity;
 
     if (effectiveLum > 0.18) {
-      // Light background showing through → force dark text for readability
       return '--text:#111111;--text-muted:rgba(20,20,20,0.72);--border:rgba(0,0,0,0.14);';
     }
-    // Dark background → theme's default light text is already fine
     return '';
   }
 
