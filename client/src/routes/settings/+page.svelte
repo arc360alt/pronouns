@@ -245,7 +245,7 @@
         <button
           onclick={() => pickAccent(preset.hex)}
           title={preset.name}
-          style="width:32px;height:32px;border-radius:50%;background:{preset.hex};border:3px solid {accentColor === preset.hex ? 'var(--text)' : 'transparent'};outline:2px solid {accentColor === preset.hex ? preset.hex : 'transparent'};outline-offset:1px;cursor:pointer;transition:transform 0.1s,border-color 0.1s;"
+          style="width:32px;height:32px;min-width:32px;min-height:32px;padding:0;border-radius:50%;background:{preset.hex};border:3px solid {accentColor === preset.hex ? 'var(--text)' : 'transparent'};outline:2px solid {accentColor === preset.hex ? preset.hex : 'transparent'};outline-offset:1px;cursor:pointer;transition:transform 0.1s,border-color 0.1s;"
           onmouseenter={(e) => (e.currentTarget as HTMLElement).style.transform = 'scale(1.15)'}
           onmouseleave={(e) => (e.currentTarget as HTMLElement).style.transform = 'scale(1)'}
         ></button>
