@@ -67,7 +67,7 @@ a:hover { text-decoration: underline; }
   height: var(--nav-height);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 200;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -123,7 +123,7 @@ a:hover { text-decoration: underline; }
 .nav-drawer-overlay {
   position: fixed;
   inset: 0;
-  z-index: 99;
+  z-index: 299;
   background: rgba(0,0,0,0.4);
 }
 .nav-drawer {
@@ -132,7 +132,7 @@ a:hover { text-decoration: underline; }
   right: 0;
   bottom: 0;
   width: min(280px, 85vw);
-  z-index: 100;
+  z-index: 300;
   background: var(--bg-card);
   border-left: 1px solid var(--border);
   display: flex;
@@ -253,6 +253,7 @@ textarea { resize: vertical; min-height: 90px; }
 /* Page heading */
 .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; letter-spacing: -0.02em; }
 .section-title { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 1rem; }
+.has-profile-bg .section-title { color: var(--text); text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 
 /* Badges */
 .badge {
@@ -511,7 +512,7 @@ button.pref-btn:hover { opacity: 1; background: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: 400;
   padding: 1rem;
 }
 .modal-box {
@@ -543,21 +544,21 @@ button.pref-btn:hover { opacity: 1; background: none; }
 .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
 
 /* Profile background system */
-/* backdrop-filter cannot see position:fixed elements on separate GPU layers.
-   Fix: make has-profile-bg itself the fixed compositor layer. It starts below the navbar
-   so the navbar is never covered. The background (position:absolute) and content scroll
-   (position:absolute) are both INSIDE this layer — same compositor — so backdrop-filter
-   on cards can see the background video/image. Content scrolls inside the wrapper. */
+/* has-profile-bg covers the full viewport (z-index: 50) including behind the navbar.
+   The navbar (z-index: 200) floats on top with backdrop-filter blurring the profile
+   background image behind it. profile-content-scroll has padding-top: --nav-height
+   so content starts below the navbar. Cards blur via backdrop-filter inside this layer. */
 main.main-content:has(.has-profile-bg) {
   padding: 0;
 }
 .has-profile-bg {
   position: fixed;
-  top: var(--nav-height);
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   overflow: hidden;
+  z-index: 50;
 }
 .profile-bg-root {
   position: absolute;
@@ -572,6 +573,7 @@ main.main-content:has(.has-profile-bg) {
   z-index: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding-top: var(--nav-height);
 }
 .profile-bg-fill {
   position: absolute;
