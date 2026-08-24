@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { user, theme, notifUnread, forcedTheme } from '$lib/stores';
+  import { user, theme, notifUnread, dmUnread, dmsEnabled, forcedTheme } from '$lib/stores';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import NotificationBell from '$lib/components/NotificationBell.svelte';
@@ -52,7 +52,15 @@
           <a href="/admin"><i class="fa-solid fa-shield-halved"></i> Admin</a>
         {/if}
       {/if}
-      {#if $user}<NotificationBell />{/if}
+      {#if $user}
+        {#if $dmsEnabled}
+          <a href="/dms" class="nav-icon-btn" title="Direct Messages" aria-label="Direct Messages">
+            <i class="fa-solid fa-message"></i>
+            {#if $dmUnread > 0}<span class="nav-icon-badge">{$dmUnread > 99 ? '99+' : $dmUnread}</span>{/if}
+          </a>
+        {/if}
+        <NotificationBell />
+      {/if}
       <button class="btn-theme" onclick={toggleTheme} disabled={!!$forcedTheme}
         title={$forcedTheme ? 'Theme locked by this profile' : undefined}>
         {#if $forcedTheme}
@@ -89,6 +97,12 @@
       <a href="/settings/site"><i class="fa-solid fa-globe"></i> My Site</a>
       <a href="/settings"><i class="fa-solid fa-gear"></i> Settings</a>
       <a href="/feedback"><i class="fa-solid fa-comment-dots"></i> Feedback</a>
+      {#if $dmsEnabled}
+        <a href="/dms" style="display:flex;align-items:center;gap:0.5rem">
+          <i class="fa-solid fa-message"></i> Direct Messages
+          {#if $dmUnread > 0}<span style="background:var(--accent);color:#fff;border-radius:999px;padding:0 6px;font-size:11px;font-weight:700">{$dmUnread > 99 ? '99+' : $dmUnread}</span>{/if}
+        </a>
+      {/if}
       <a href="/notifications" style="display:flex;align-items:center;gap:0.5rem">
         <i class="fa-solid fa-bell"></i> Notifications
         {#if $notifUnread > 0}<span style="background:var(--accent);color:#fff;border-radius:999px;padding:0 6px;font-size:11px;font-weight:700">{$notifUnread > 99 ? '99+' : $notifUnread}</span>{/if}

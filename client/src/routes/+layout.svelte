@@ -2,7 +2,7 @@
   import '../app.css';
   import Navbar from '$lib/components/Navbar.svelte';
   import SiteBanner from '$lib/components/SiteBanner.svelte';
-  import { user, theme, userReady, notifUnread } from '$lib/stores';
+  import { user, theme, userReady, notifUnread, dmUnread, dmsEnabled } from '$lib/stores';
   import { loadSavedAccent } from '$lib/accent';
   import { onMount, onDestroy } from 'svelte';
   import { api } from '$lib/api';
@@ -17,10 +17,20 @@
   let bannerDismissed = $state(false);
   let notifTimer: ReturnType<typeof setInterval> | null = null;
 
-  async function pollNotifCount() {
+  async function pollCounts() {
     try {
       const { count } = await api.get<{ count: number }>('/api/notifications/unread-count');
       notifUnread.set(count);
+    } catch {}
+    try {
+      const status = await api.get<{ enabled: boolean }>('/api/dm/status');
+      dmsEnabled.set(status.enabled);
+      if (status.enabled) {
+        const convs = await api.get<{ unread_count: number }[]>('/api/dm/conversations');
+        dmUnread.set(convs.reduce((sum, c) => sum + (c.unread_count || 0), 0));
+      } else {
+        dmUnread.set(0);
+      }
     } catch {}
   }
 
@@ -32,13 +42,19 @@
 
     try { bannerDismissed = sessionStorage.getItem('banner_dismissed') === '1'; } catch {}
 
+    // Fetch DM status early so UI reflects it before auth completes
+    try {
+      const status = await api.get<{ enabled: boolean }>('/api/dm/status');
+      dmsEnabled.set(status.enabled);
+    } catch {}
+
     const token = localStorage.getItem('token');
     if (token) {
       try {
         const me = await api.get<User>('/api/auth/me');
         user.set(me);
-        pollNotifCount();
-        notifTimer = setInterval(pollNotifCount, 60_000);
+        pollCounts();
+        notifTimer = setInterval(pollCounts, 60_000);
       } catch {
         localStorage.removeItem('token');
       }

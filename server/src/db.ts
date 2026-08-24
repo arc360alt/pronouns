@@ -180,6 +180,9 @@ addCol('profile_links', 'link_icon_size', 'REAL DEFAULT 1.5');
 addCol('profiles', 'section_labels', 'TEXT DEFAULT NULL');
 addCol('profiles', 'content_align', "TEXT NOT NULL DEFAULT 'default'");
 try { db.exec("UPDATE profiles SET content_align = 'default' WHERE content_align = 'center'"); } catch { /* ignore */ }
+addCol('users', 'dm_requests_enabled', 'INTEGER NOT NULL DEFAULT 0');
+// Seed default site settings (only inserts if not already present)
+db.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES ('dms_enabled', '0')").run();
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS site_settings (
@@ -223,6 +226,65 @@ db.exec(`
     visible INTEGER NOT NULL DEFAULT 1,
     sort_order INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (user_id, badge_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS dm_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_user_id INTEGER NOT NULL,
+    to_user_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(from_user_id, to_user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS dm_conversations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user1_id INTEGER NOT NULL,
+    user2_id INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS dm_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (conversation_id) REFERENCES dm_conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS dm_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id INTEGER NOT NULL,
+    reporter_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (conversation_id) REFERENCES dm_conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS profile_slots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    slot_num INTEGER NOT NULL CHECK(slot_num IN (1,2,3)),
+    name TEXT NOT NULL DEFAULT 'Untitled',
+    data TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(user_id, slot_num),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS dm_reads (
+    conv_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    last_read TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (conv_id, user_id),
+    FOREIGN KEY (conv_id) REFERENCES dm_conversations(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 `);

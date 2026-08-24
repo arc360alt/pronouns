@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { user, waitForUser } from '$lib/stores';
+  import { user, waitForUser, dmsEnabled } from '$lib/stores';
   import { api } from '$lib/api';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
@@ -24,6 +24,7 @@
   let googleLinking = $state(false);
 
   let accentColor = $state(DEFAULT_ACCENT);
+  let dmRequestsEnabled = $state(false);
 
   function pickAccent(hex: string) {
     accentColor = hex;
@@ -42,7 +43,17 @@
       const cfg = await api.get<{ googleClientId: string | null }>('/api/auth/config');
       if (cfg.googleClientId) googleClientId = cfg.googleClientId;
     } catch { /* no google config */ }
+
+    try {
+      const dm = await api.get<{ dm_requests_enabled: number }>('/api/dm/settings');
+      dmRequestsEnabled = !!dm.dm_requests_enabled;
+    } catch {}
   });
+
+  async function toggleDmRequests() {
+    dmRequestsEnabled = !dmRequestsEnabled;
+    await api.put('/api/dm/settings', { dm_requests_enabled: dmRequestsEnabled });
+  }
 
   function calcCooldown(changedAt: string | null | undefined) {
     if (!changedAt) { cooldownDays = 0; return; }
@@ -263,6 +274,30 @@
       {/if}
     </div>
   </div>
+
+  <!-- Messaging -->
+  {#if $dmsEnabled}
+  <div class="card" style="margin-top:1rem">
+    <p class="section-title" style="margin-bottom:0.25rem">Messaging</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Control who can contact you via Direct Messages.</p>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+      <div>
+        <div style="font-size:14px;font-weight:500;color:var(--text)">Accept DM requests</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Allow other users to send you direct message requests. Off by default.</div>
+      </div>
+      <button
+        onclick={toggleDmRequests}
+        style="flex-shrink:0;width:44px;height:24px;border-radius:999px;border:none;cursor:pointer;position:relative;padding:0;transition:background 0.2s;background:{dmRequestsEnabled ? 'var(--accent)' : 'var(--border)'}"
+        title={dmRequestsEnabled ? 'Turn off DM requests' : 'Turn on DM requests'}
+      >
+        <span style="position:absolute;top:3px;left:{dmRequestsEnabled ? '23px' : '3px'};width:18px;height:18px;background:#fff;border-radius:50%;transition:left 0.2s;display:block"></span>
+      </button>
+    </div>
+    <div style="margin-top:1rem">
+      <a href="/dms" class="btn btn-secondary btn-sm"><i class="fa-solid fa-message"></i> Go to Direct Messages</a>
+    </div>
+  </div>
+  {/if}
 
   <!-- Session -->
   <div class="card" style="margin-top:1rem">

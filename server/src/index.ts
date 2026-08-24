@@ -17,6 +17,8 @@ import feedbackRoutes from './routes/feedback';
 import notificationRoutes from './routes/notifications';
 import siteRoutes from './routes/site';
 import sitebuildRoutes, { publicRouter as sitebuildPublic } from './routes/sitebuilder';
+import dmRoutes from './routes/dm';
+import slotsRoutes from './routes/slots';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3012');
@@ -50,6 +52,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/site', siteRoutes);
 app.use('/api/sitebuilder', sitebuildRoutes);
 app.use('/sites', sitebuildPublic);
+app.use('/api/dm', dmRoutes);
+app.use('/api/profile/slots', slotsRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 

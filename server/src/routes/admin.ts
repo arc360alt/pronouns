@@ -103,6 +103,21 @@ router.put('/banner', requireAdmin, (req, res) => {
   return res.json({ message: 'Banner updated' });
 });
 
+router.get('/site-settings', requireAdmin, (_req, res) => {
+  const get = (key: string) =>
+    (db.prepare('SELECT value FROM site_settings WHERE key = ?').get(key) as { value: string } | undefined)?.value ?? null;
+  return res.json({
+    dms_enabled: get('dms_enabled') === '1',
+  });
+});
+
+router.put('/site-settings', requireAdmin, (req, res) => {
+  const { dms_enabled } = req.body;
+  const set = db.prepare('INSERT OR REPLACE INTO site_settings (key, value) VALUES (?, ?)');
+  if (typeof dms_enabled === 'boolean') set.run('dms_enabled', dms_enabled ? '1' : '0');
+  return res.json({ ok: true });
+});
+
 router.get('/badges', requireAdmin, (_req, res) => {
   return res.json(BADGE_DEFS);
 });

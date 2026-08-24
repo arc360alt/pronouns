@@ -742,7 +742,131 @@
     finally { sectionLabelsSaving = false; }
   }
 
-  let activeTab = $state<'profile' | 'appearance' | 'content' | 'social'>('profile');
+  let activeTab = $state<'profile' | 'appearance' | 'content' | 'social' | 'slots'>('profile');
+
+  // ── Save Slots ──
+  type SlotMeta = { slot_num: number; name: string; updated_at: string };
+  let slots = $state<SlotMeta[]>([]);
+  let slotLoading = $state(false);
+  let slotMsg = $state('');
+  let slotErr = $state('');
+  let slotNameInput = $state<Record<number, string>>({ 1: '', 2: '', 3: '' });
+  let importSlotTarget = $state<number | null>(null);
+  let importData = $state<unknown>(null);
+  let importFileName = $state('');
+
+  async function loadSlots() {
+    slotLoading = true;
+    try {
+      const data = await api.get<SlotMeta[]>('/api/profile/slots');
+      slots = data;
+      for (const s of data) slotNameInput[s.slot_num] = s.name;
+    } catch { /* ignore */ }
+    slotLoading = false;
+  }
+
+  async function saveSlot(num: number) {
+    const name = slotNameInput[num]?.trim() || `Slot ${num}`;
+    slotMsg = ''; slotErr = '';
+    try {
+      await api.post(`/api/profile/slots/${num}`, { name });
+      slotMsg = `Slot ${num} saved!`;
+      await loadSlots();
+    } catch (e: unknown) {
+      slotErr = (e as { message?: string })?.message || 'Failed to save';
+    }
+    setTimeout(() => { slotMsg = ''; slotErr = ''; }, 3000);
+  }
+
+  async function loadSlot(num: number) {
+    slotMsg = ''; slotErr = '';
+    if (!confirm(`Load slot ${num}? This will overwrite your current visual settings.`)) return;
+    try {
+      await api.post(`/api/profile/slots/${num}/load`, {});
+      slotMsg = `Slot ${num} loaded! Reloading…`;
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (e: unknown) {
+      slotErr = (e as { message?: string })?.message || 'Failed to load';
+      setTimeout(() => { slotMsg = ''; slotErr = ''; }, 3000);
+    }
+  }
+
+  async function deleteSlot(num: number) {
+    slotMsg = ''; slotErr = '';
+    if (!confirm(`Delete slot ${num}?`)) return;
+    try {
+      await api.delete(`/api/profile/slots/${num}`);
+      slotNameInput[num] = '';
+      slotMsg = `Slot ${num} deleted.`;
+      await loadSlots();
+    } catch (e: unknown) {
+      slotErr = (e as { message?: string })?.message || 'Failed to delete';
+    }
+    setTimeout(() => { slotMsg = ''; slotErr = ''; }, 3000);
+  }
+
+  async function exportSlot(num: number) {
+    try {
+      const data = await api.get<Record<string, unknown>>(`/api/profile/slots/${num}`);
+      const slotName = slots.find(s => s.slot_num === num)?.name || `slot-${num}`;
+      data._name = slotName;
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${slotName.replace(/[^a-z0-9_-]/gi, '_')}.pronouns.json`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch (e: unknown) {
+      slotErr = (e as { message?: string })?.message || 'Failed to export';
+      setTimeout(() => { slotErr = ''; }, 3000);
+    }
+  }
+
+  function onImportFile(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    importFileName = file.name;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target?.result as string);
+        if (!parsed || parsed.version !== 1) { slotErr = 'Invalid file — not a pronouns profile export'; return; }
+        importData = parsed;
+      } catch { slotErr = 'Could not parse file'; }
+    };
+    reader.readAsText(file);
+  }
+
+  async function applyImportToSlot(num: number) {
+    if (!importData) return;
+    slotMsg = ''; slotErr = '';
+    try {
+      await api.post(`/api/profile/slots/import/slot/${num}`, importData);
+      slotMsg = `Imported into slot ${num}!`;
+      importData = null; importFileName = ''; importSlotTarget = null;
+      await loadSlots();
+    } catch (e: unknown) {
+      slotErr = (e as { message?: string })?.message || 'Import failed';
+    }
+    setTimeout(() => { slotMsg = ''; slotErr = ''; }, 3000);
+  }
+
+  async function applyImportNow() {
+    if (!importData) return;
+    if (!confirm('Apply this import to your current profile? Your visual settings will be replaced.')) return;
+    slotMsg = ''; slotErr = '';
+    try {
+      await api.post('/api/profile/slots/import/apply', importData);
+      slotMsg = 'Import applied! Reloading…';
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (e: unknown) {
+      slotErr = (e as { message?: string })?.message || 'Import failed';
+      setTimeout(() => { slotMsg = ''; slotErr = ''; }, 3000);
+    }
+  }
+
+  $effect(() => {
+    if (activeTab === 'slots') loadSlots();
+  });
 </script>
 
 <svelte:head><title>Edit Profile — pronouns</title></svelte:head>
@@ -771,6 +895,9 @@
     </button>
     <button class="editor-tab" class:active={activeTab === 'social'} onclick={() => activeTab = 'social'}>
       <i class="fa-solid fa-users"></i><span>Social</span>
+    </button>
+    <button class="editor-tab" class:active={activeTab === 'slots'} onclick={() => activeTab = 'slots'}>
+      <i class="fa-solid fa-floppy-disk"></i><span>Save Slots</span>
     </button>
   </div>
 
@@ -1548,6 +1675,86 @@
     </div>
   </div>
 
+  {:else if activeTab === 'slots'}
+  <!-- ── Save Slots ── -->
+  <div class="card">
+    <p class="section-title">Save Slots</p>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem">
+      Save up to 3 snapshots of your visual customization (colors, background, sections, flags, links, images). Personal info is never saved.
+    </p>
+
+    {#if slotMsg}<p class="msg-success" style="margin-bottom:1rem">{slotMsg}</p>{/if}
+    {#if slotErr}<p class="msg-error" style="margin-bottom:1rem">{slotErr}</p>{/if}
+
+    {#if slotLoading}
+      <PixLoader size={32} />
+    {:else}
+      {#each [1, 2, 3] as num}
+        {@const meta = slots.find(s => s.slot_num === num)}
+        <div class="slot-card">
+          <div class="slot-header">
+            <span class="slot-num">Slot {num}</span>
+            {#if meta}
+              <span class="slot-date">Saved {new Date(meta.updated_at).toLocaleDateString()}</span>
+            {:else}
+              <span class="slot-empty">Empty</span>
+            {/if}
+          </div>
+
+          <div class="form-row" style="margin-bottom:0.75rem">
+            <input type="text" bind:value={slotNameInput[num]} placeholder="Slot name…" maxlength="64" />
+            <button class="btn btn-primary btn-sm" onclick={() => saveSlot(num)}>
+              <i class="fa-solid fa-floppy-disk"></i> Save current
+            </button>
+          </div>
+
+          {#if meta}
+            <div class="slot-actions">
+              <button class="btn btn-secondary btn-sm" onclick={() => loadSlot(num)}>
+                <i class="fa-solid fa-upload"></i> Load
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick={() => exportSlot(num)}>
+                <i class="fa-solid fa-download"></i> Export
+              </button>
+              <button class="btn btn-danger btn-sm" onclick={() => deleteSlot(num)}>
+                <i class="fa-solid fa-trash"></i> Delete
+              </button>
+            </div>
+          {/if}
+        </div>
+      {/each}
+
+      <!-- Import -->
+      <div class="slot-card" style="margin-top:1.25rem">
+        <p class="section-title" style="font-size:14px;margin-bottom:0.5rem">Import from File</p>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:0.75rem">
+          Import a <code>.pronouns.json</code> file exported from this or another account.
+        </p>
+        <label class="btn btn-secondary btn-sm" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.4rem">
+          <i class="fa-solid fa-file-arrow-up"></i> Choose file
+          <input type="file" accept=".json,.pronouns.json" onchange={onImportFile} style="display:none" />
+        </label>
+        {#if importFileName}
+          <span style="font-size:13px;color:var(--text-muted);margin-left:0.5rem">{importFileName}</span>
+        {/if}
+
+        {#if importData}
+          <div style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center">
+            <span style="font-size:13px;color:var(--text-muted)">Apply to:</span>
+            <button class="btn btn-primary btn-sm" onclick={applyImportNow}>
+              <i class="fa-solid fa-bolt"></i> Current profile
+            </button>
+            {#each [1, 2, 3] as num}
+              <button class="btn btn-secondary btn-sm" onclick={() => applyImportToSlot(num)}>
+                Slot {num}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
+  </div>
+
   {/if}
 </div>
 {/if}
@@ -1731,4 +1938,38 @@
     flex-shrink: 0;
   }
   .size-toast-close:hover { opacity: 1; }
+
+  /* Save Slots */
+  .slot-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  .slot-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+  }
+  .slot-num {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .slot-date {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .slot-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .slot-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
 </style>

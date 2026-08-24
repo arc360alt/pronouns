@@ -4,6 +4,8 @@ import type { User } from './types';
 export const user = writable<User | null>(null);
 export const theme = writable<'dark' | 'light'>('dark');
 export const notifUnread = writable<number>(0);
+export const dmUnread = writable<number>(0);
+export const dmsEnabled = writable<boolean>(false);
 export const forcedTheme = writable<'dark' | 'light' | null>(null);
 
 // Resolves to true once the layout has finished the /api/auth/me check.

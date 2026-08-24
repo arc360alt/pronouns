@@ -7,10 +7,14 @@
   import PixLoader from '$lib/components/PixLoader.svelte';
   import type { Report, AdminUser, Badge, Feedback } from '$lib/types';
 
-  let tab = $state<'reports' | 'users' | 'banner' | 'feedback'>('reports');
+  let tab = $state<'reports' | 'users' | 'banner' | 'feedback' | 'dm-reports' | 'settings'>('reports');
   let reports = $state<Report[]>([]);
   let users = $state<AdminUser[]>([]);
   let feedbackItems = $state<Feedback[]>([]);
+  let dmReports = $state<{ id: number; conversation_id: number; reporter_username: string; user1_username: string; user2_username: string; status: string; created_at: string }[]>([]);
+  let dmReportMessages = $state<{ id: number; sender_username: string; content: string; created_at: string }[]>([]);
+  let dmReportModalId = $state<number | null>(null);
+  let dmReportLoading = $state(false);
   let loading = $state(true);
   let msg = $state('');
 
@@ -22,6 +26,11 @@
   let bannerBtnUrl = $state('');
   let bannerSaving = $state(false);
 
+  // Site settings
+  let dmsGlobalEnabled = $state(false);
+  let settingsSaving = $state(false);
+  let settingsMsg = $state('');
+
   onMount(async () => {
     const me = await waitForUser();
     if (!me?.is_admin) { goto('/'); return; }
@@ -30,20 +39,60 @@
   });
 
   async function loadAll() {
-    const [r, u, b, f] = await Promise.all([
+    const [r, u, b, f, dr, siteSettings] = await Promise.all([
       api.get<Report[]>('/api/admin/reports'),
       api.get<AdminUser[]>('/api/admin/users'),
       api.get<{ active: boolean; text: string; color: string; btn_text: string; btn_url: string }>('/api/admin/banner'),
       api.get<Feedback[]>('/api/admin/feedback'),
+      api.get<typeof dmReports>('/api/dm/admin/reports'),
+      api.get<{ dms_enabled: boolean }>('/api/admin/site-settings'),
     ]);
     reports = r;
     users = u;
     feedbackItems = f;
+    dmReports = dr;
     bannerActive = b.active;
     bannerText = b.text;
     bannerColor = b.color || '#e07a27';
     bannerBtnText = b.btn_text || '';
     bannerBtnUrl = b.btn_url || '';
+    dmsGlobalEnabled = siteSettings.dms_enabled;
+  }
+
+  async function saveSiteSettings() {
+    settingsSaving = true; settingsMsg = '';
+    try {
+      await api.put('/api/admin/site-settings', { dms_enabled: dmsGlobalEnabled });
+      settingsMsg = '✓ Settings saved';
+    } catch {
+      settingsMsg = 'Failed to save';
+    }
+    settingsSaving = false;
+    setTimeout(() => { settingsMsg = ''; }, 3000);
+  }
+
+  async function openDmReport(id: number) {
+    dmReportModalId = id;
+    dmReportLoading = true;
+    dmReportMessages = [];
+    try {
+      dmReportMessages = await api.get(`/api/dm/admin/reports/${id}/messages`);
+    } catch {}
+    dmReportLoading = false;
+  }
+
+  async function resolveDmReport(id: number, status: 'resolved' | 'dismissed') {
+    await api.put(`/api/dm/admin/reports/${id}`, { status });
+    dmReports = dmReports.map(r => r.id === id ? { ...r, status } : r);
+    if (dmReportModalId === id) dmReportModalId = null;
+  }
+
+  function relTime(iso: string) {
+    const diff = (Date.now() - new Date(iso + 'Z').getTime()) / 1000;
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return new Date(iso + 'Z').toLocaleDateString('en', { month: 'short', day: 'numeric' });
   }
 
   async function saveBanner() {
@@ -231,6 +280,12 @@
     </button>
     <button class="tab-btn" class:active={tab === 'feedback'} onclick={() => tab = 'feedback'}>
       Feedback {#if unreadFeedback > 0}<span style="background:var(--accent);color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px">{unreadFeedback}</span>{/if}
+    </button>
+    <button class="tab-btn" class:active={tab === 'dm-reports'} onclick={() => tab = 'dm-reports'}>
+      DM Reports {#if dmReports.filter(r => r.status === 'pending').length > 0}<span style="background:var(--danger);color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px">{dmReports.filter(r => r.status === 'pending').length}</span>{/if}
+    </button>
+    <button class="tab-btn" class:active={tab === 'settings'} onclick={() => tab = 'settings'}>
+      Site Settings
     </button>
   </div>
 
@@ -479,7 +534,120 @@
       </div>
     {/if}
   {/if}
+
+  {#if tab === 'dm-reports'}
+    {#if dmReports.length === 0}
+      <p style="color:var(--text-muted)">No DM reports yet.</p>
+    {:else}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Reporter</th><th>Conversation</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody>
+            {#each dmReports as r}
+              <tr style="opacity:{r.status !== 'pending' ? 0.5 : 1}">
+                <td>@{r.reporter_username}</td>
+                <td>@{r.user1_username} ↔ @{r.user2_username}</td>
+                <td><span style="text-transform:capitalize">{r.status}</span></td>
+                <td style="font-size:12px;color:var(--text-muted)">{relTime(r.created_at)}</td>
+                <td>
+                  <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+                    <button class="btn btn-secondary btn-sm" onclick={() => openDmReport(r.id)}>
+                      <i class="fa-solid fa-eye"></i> View
+                    </button>
+                    {#if r.status === 'pending'}
+                      <button class="btn btn-ghost btn-sm" onclick={() => resolveDmReport(r.id, 'dismissed')}>Dismiss</button>
+                    {/if}
+                  </div>
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
+  {/if}
+
+  {#if tab === 'settings'}
+    <div style="max-width:520px">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:1.25rem">Site Settings</h3>
+
+      <!-- DMs killswitch -->
+      <div class="card" style="margin-bottom:1rem">
+        <p class="section-title" style="margin-bottom:0.25rem">Direct Messaging</p>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">
+          Master switch for the DM feature. When off, the DM page, buttons, and API are completely disabled for all users. Admins can still view DM reports.
+        </p>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--text)">Direct Messages enabled</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+              {dmsGlobalEnabled ? 'DMs are ON — users can send and receive messages.' : 'DMs are OFF — all DM functionality is hidden and blocked.'}
+            </div>
+          </div>
+          <button
+            onclick={() => dmsGlobalEnabled = !dmsGlobalEnabled}
+            style="flex-shrink:0;width:44px;height:24px;border-radius:999px;border:none;cursor:pointer;position:relative;padding:0;transition:background 0.2s;background:{dmsGlobalEnabled ? 'var(--accent)' : 'var(--danger)'}"
+            title={dmsGlobalEnabled ? 'Click to disable DMs' : 'Click to enable DMs'}
+          >
+            <span style="position:absolute;top:3px;left:{dmsGlobalEnabled ? '23px' : '3px'};width:18px;height:18px;background:#fff;border-radius:50%;transition:left 0.2s;display:block"></span>
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:1rem">
+        <button class="btn btn-primary" onclick={saveSiteSettings} disabled={settingsSaving}>
+          {settingsSaving ? 'Saving…' : 'Save Settings'}
+        </button>
+        {#if settingsMsg}
+          <span style="font-size:13px;color:{settingsMsg.startsWith('✓') ? 'var(--success)' : 'var(--danger)'}">{settingsMsg}</span>
+        {/if}
+      </div>
+    </div>
+  {/if}
 </div>
+{/if}
+
+<!-- DM Report messages modal -->
+{#if dmReportModalId !== null}
+  {#each dmReports.filter(r => r.id === dmReportModalId) as rep}
+    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+    <div class="modal-overlay" onclick={() => dmReportModalId = null}>
+      <div class="modal-box" style="max-width:560px" onclick={(e) => e.stopPropagation()}>
+        <div class="modal-header">
+          <h3>DM Report — @{rep.user1_username} ↔ @{rep.user2_username}</h3>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:1rem">Reported by @{rep.reporter_username}</p>
+          {#if dmReportLoading}
+            <p style="color:var(--text-muted)">Loading messages…</p>
+          {:else if dmReportMessages.length === 0}
+            <p style="color:var(--text-muted)">No messages in this conversation.</p>
+          {:else}
+            <div style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem;border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem">
+              {#each dmReportMessages as m}
+                <div style="font-size:13px">
+                  <span style="font-weight:600;color:var(--accent)">@{m.sender_username}</span>
+                  <span style="color:var(--text-muted);font-size:11px;margin-left:0.4rem">{relTime(m.created_at)}</span>
+                  <div style="margin-top:2px;color:var(--text);word-break:break-word">{m.content}</div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+          <div class="modal-actions">
+            <button class="btn btn-ghost" onclick={() => dmReportModalId = null}>Close</button>
+            {#if rep.status === 'pending'}
+              <button class="btn btn-ghost btn-sm" onclick={() => resolveDmReport(dmReportModalId!, 'dismissed')}>Dismiss</button>
+              {#each users.filter(u => u.username === (rep.user1_username === rep.reporter_username ? rep.user2_username : rep.user1_username) && u.id !== $user?.id) as repUser}
+                <button class="btn btn-danger btn-sm" onclick={async () => { await toggleBan(repUser); resolveDmReport(dmReportModalId!, 'resolved'); }}>
+                  {repUser.is_banned ? 'Unban' : 'Ban user'} & Resolve
+                </button>
+              {/each}
+            {/if}
+          </div>
+        </div>
+      </div>
+    </div>
+  {/each}
 {/if}
 
 <Modal open={!!badgeModalUser} title="Badges — @{badgeModalUser?.username ?? ''}" onClose={() => badgeModalUser = null}>
