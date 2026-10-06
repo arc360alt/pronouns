@@ -17,7 +17,9 @@
     <span>{title}</span>
     <md-icon-button onclick={onClose} aria-label="Close"><i class="fa-solid fa-xmark"></i></md-icon-button>
   </div>
-  <div slot="content">
+  <!-- Initial focus target, so the close button doesn't open with a focus ring -->
+  <!-- svelte-ignore a11y_autofocus -->
+  <div slot="content" tabindex="-1" autofocus>
     {#if open}{@render children()}{/if}
   </div>
 </md-dialog>

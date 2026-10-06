@@ -736,8 +736,24 @@ md-dialog {
   max-width: min(560px, calc(100vw - 2rem));
   width: 100%;
 }
+/* md-dialog pads its slots via ::slotted(), which the global reset overrides — restore M3 spacing */
+md-dialog > [slot="headline"] {
+  padding: 24px 16px 0 24px;
+  font-family: var(--md-ref-typeface-brand);
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface);
+}
 md-dialog .modal-dialog-headline { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-md-dialog [slot="content"] { color: var(--md-sys-color-on-surface); font-size: 15px; }
+md-dialog .modal-dialog-headline md-icon-button { margin: -4px 0; }
+md-dialog > [slot="content"] {
+  outline: none;
+  padding: 16px 24px 24px;
+  color: var(--md-sys-color-on-surface);
+  font-size: 15px;
+}
+md-dialog > [slot="content"] .modal-actions { margin-top: 1.5rem; }
 
 /* Legacy overlay modal (image cropper etc.) — styled as an M3 dialog */
 .modal-overlay {

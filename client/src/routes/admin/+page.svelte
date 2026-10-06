@@ -633,9 +633,9 @@
           <div class="modal-actions">
             <md-text-button onclick={() => dmReportModalId = null}>Close</md-text-button>
             {#if rep.status === 'pending'}
-              <md-text-button class="md-sm" onclick={() => resolveDmReport(dmReportModalId!, 'dismissed')}>Dismiss</md-text-button>
+              <md-text-button onclick={() => resolveDmReport(dmReportModalId!, 'dismissed')}>Dismiss</md-text-button>
               {#each users.filter(u => u.username === (rep.user1_username === rep.reporter_username ? rep.user2_username : rep.user1_username) && u.id !== $user?.id) as repUser}
-                <md-filled-button class="md-danger md-sm" onclick={async () => { await toggleBan(repUser); resolveDmReport(dmReportModalId!, 'resolved'); }}>
+                <md-filled-button class="md-danger" onclick={async () => { await toggleBan(repUser); resolveDmReport(dmReportModalId!, 'resolved'); }}>
                   {repUser.is_banned ? 'Unban' : 'Ban user'} & Resolve
                 </md-filled-button>
               {/each}

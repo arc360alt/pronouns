@@ -13,7 +13,6 @@
       "Unread badges for notifications and messages in the navigation bars",
       "Top bar now highlights the page you're on",
       "Profile editor tabs now fit on mobile screens, including Save Slots",
-      "Toggles for DM requests and the admin DM switch are now Material switches",
       "Fixed the repeated /sw.js requests left behind by old service workers"
     ]
   },

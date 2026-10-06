@@ -637,7 +637,7 @@
       {#if reportMsg}
         <p class={reportMsg.includes('submitted') ? 'msg-success' : 'msg-error'}>{reportMsg}</p>
         <div class="modal-actions">
-          <md-outlined-button onclick={() => reportOpen = false}>Close</md-outlined-button>
+          <md-text-button onclick={() => reportOpen = false}>Close</md-text-button>
         </div>
       {:else}
         <form onsubmit={submitReport}>
@@ -651,8 +651,8 @@
             ></textarea>
           </div>
           <div class="modal-actions">
-            <md-outlined-button type="button" onclick={() => reportOpen = false}>Cancel</md-outlined-button>
-            <md-filled-button type="submit" class="md-danger md-sm" disabled={reportLoading}>
+            <md-text-button type="button" onclick={() => reportOpen = false}>Cancel</md-text-button>
+            <md-filled-button type="submit" class="md-danger" disabled={reportLoading}>
               {reportLoading ? 'Submitting…' : 'Submit report'}
             </md-filled-button>
           </div>
@@ -685,7 +685,7 @@
       </div>
 
       <div class="modal-actions">
-        <md-outlined-button onclick={() => { linkWarningOpen = false; pendingLink = ''; }}>Cancel</md-outlined-button>
+        <md-text-button onclick={() => { linkWarningOpen = false; pendingLink = ''; }}>Cancel</md-text-button>
         <md-filled-button onclick={openPendingLink}>
           Open <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:11px"></i>
         </md-filled-button>

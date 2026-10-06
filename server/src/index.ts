@@ -19,6 +19,7 @@ import siteRoutes from './routes/site';
 import sitebuildRoutes, { publicRouter as sitebuildPublic } from './routes/sitebuilder';
 import dmRoutes from './routes/dm';
 import slotsRoutes from './routes/slots';
+import { startUploadCleanupJob } from './jobs/cleanupUploads';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3012');
@@ -120,6 +121,7 @@ if (fs.existsSync(clientBuildDir)) {
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
+  startUploadCleanupJob();
 });
 
 export default app;
