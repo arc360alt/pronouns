@@ -20,12 +20,14 @@
     <h1>pronouns<span>.sbs</span></h1>
     <p class="tagline">Create and share <em>all</em> of your pronouns</p>
 
-    {#if $user}
-      <a href="/@{$user.username}" class="btn btn-primary">View my profile</a>
-      <a href="/settings/profile" class="btn btn-secondary" style="margin-left:0.5rem">Edit profile</a>
-    {:else}
-      <a href="/register" class="btn btn-primary">Log in or sign up</a>
-    {/if}
+    <div class="home-actions">
+      {#if $user}
+        <md-filled-button href="/@{$user.username}"><i slot="icon" class="fa-solid fa-circle-user"></i> View my profile</md-filled-button>
+        <md-outlined-button href="/settings/profile"><i slot="icon" class="fa-solid fa-pen"></i> Edit profile</md-outlined-button>
+      {:else}
+        <md-filled-button href="/register"><i slot="icon" class="fa-solid fa-user-plus"></i> Log in or sign up</md-filled-button>
+      {/if}
+    </div>
 
     <p style="margin-top:1.5rem; color:var(--text-muted); max-width:600px; line-height:1.8;">
       Everybody uses pronouns to refer to others. Whether it be he/him, she/her, they/them,
@@ -38,26 +40,32 @@
 
     <div class="home-cards">
       <div class="home-card">
+        <div class="home-card-icon"><i class="fa-solid fa-id-card"></i></div>
         <h3>In-depth profiles</h3>
         <p>Add your pronouns, gender, names you go by, pride flags, a bio, extra images, and more.</p>
       </div>
       <div class="home-card">
+        <div class="home-card-icon"><i class="fa-solid fa-link"></i></div>
         <h3>Share via link</h3>
-        <p>Your profile lives at <code style="font-size:12px;color:var(--accent)">/@username</code> — share it anywhere you like.</p>
+        <p>Your profile lives at <code style="font-size:12px;color:var(--accent);font-family:'Roboto Mono',monospace">/@username</code> — share it anywhere you like.</p>
       </div>
       <div class="home-card">
+        <div class="home-card-icon"><i class="fa-solid fa-shield-halved"></i></div>
         <h3>Up to date and secure</h3>
         <p>Unlike pronouns.cc wich has not been updated in 2+ years, this app is up to date and very secure.</p>
       </div>
       <div class="home-card">
+        <div class="home-card-icon"><i class="fa-solid fa-user-group"></i></div>
         <h3>Connect with friends</h3>
         <p>Link to friends' profiles directly on your own page so people can find the people you know.</p>
       </div>
       <div class="home-card">
+        <div class="home-card-icon"><i class="fa-solid fa-globe"></i></div>
         <h3>Custom websites</h3>
         <p>Alongside having your own profile, you can create your own custom website that we will host for you (You can find this by going to Settings, then My Site).</p>
       </div>
       <div class="home-card">
+        <div class="home-card-icon"><i class="fa-solid fa-face-smile"></i></div>
         <h3>Have fun :3</h3>
         <p>Have fun using our app, customize your profile to your hearts content!</p>
       </div>
@@ -85,13 +93,13 @@
         {/each}
       </div>
       {#if updates.length > SHOW_DEFAULT}
-        <button class="updates-show-more" onclick={() => showAll = !showAll}>
+        <md-text-button class="updates-show-more" onclick={() => showAll = !showAll}>
           {#if showAll}
-            <i class="fa-solid fa-chevron-up"></i> Show less
+            <i slot="icon" class="fa-solid fa-chevron-up"></i> Show less
           {:else}
-            <i class="fa-solid fa-chevron-down"></i> Show {updates.length - SHOW_DEFAULT} older update{updates.length - SHOW_DEFAULT === 1 ? '' : 's'}
+            <i slot="icon" class="fa-solid fa-chevron-down"></i> Show {updates.length - SHOW_DEFAULT} older update{updates.length - SHOW_DEFAULT === 1 ? '' : 's'}
           {/if}
-        </button>
+        </md-text-button>
       {/if}
     </div>
   </div>

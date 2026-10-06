@@ -268,26 +268,26 @@
 
   {#if msg}<p class="msg-success" style="margin-bottom:1rem">{msg}</p>{/if}
 
-  <div class="tabs">
-    <button class="tab-btn" class:active={tab === 'reports'} onclick={() => tab = 'reports'}>
-      Reports {#if pendingCount > 0}<span style="background:var(--danger);color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px">{pendingCount}</span>{/if}
-    </button>
-    <button class="tab-btn" class:active={tab === 'users'} onclick={() => tab = 'users'}>
+  <md-tabs aria-label="Admin sections">
+    <md-primary-tab active={tab === 'reports'} onclick={() => tab = 'reports'}>
+      Reports {#if pendingCount > 0}<span style="background:var(--md-sys-color-error);color:var(--md-sys-color-on-error);border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px">{pendingCount}</span>{/if}
+    </md-primary-tab>
+    <md-primary-tab active={tab === 'users'} onclick={() => tab = 'users'}>
       Users ({users.length})
-    </button>
-    <button class="tab-btn" class:active={tab === 'banner'} onclick={() => tab = 'banner'}>
+    </md-primary-tab>
+    <md-primary-tab active={tab === 'banner'} onclick={() => tab = 'banner'}>
       Site Banner
-    </button>
-    <button class="tab-btn" class:active={tab === 'feedback'} onclick={() => tab = 'feedback'}>
-      Feedback {#if unreadFeedback > 0}<span style="background:var(--accent);color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px">{unreadFeedback}</span>{/if}
-    </button>
-    <button class="tab-btn" class:active={tab === 'dm-reports'} onclick={() => tab = 'dm-reports'}>
-      DM Reports {#if dmReports.filter(r => r.status === 'pending').length > 0}<span style="background:var(--danger);color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px">{dmReports.filter(r => r.status === 'pending').length}</span>{/if}
-    </button>
-    <button class="tab-btn" class:active={tab === 'settings'} onclick={() => tab = 'settings'}>
+    </md-primary-tab>
+    <md-primary-tab active={tab === 'feedback'} onclick={() => tab = 'feedback'}>
+      Feedback {#if unreadFeedback > 0}<span style="background:var(--md-sys-color-error);color:var(--md-sys-color-on-error);border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px">{unreadFeedback}</span>{/if}
+    </md-primary-tab>
+    <md-primary-tab active={tab === 'dm-reports'} onclick={() => tab = 'dm-reports'}>
+      DM Reports {#if dmReports.filter(r => r.status === 'pending').length > 0}<span style="background:var(--md-sys-color-error);color:var(--md-sys-color-on-error);border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px">{dmReports.filter(r => r.status === 'pending').length}</span>{/if}
+    </md-primary-tab>
+    <md-primary-tab active={tab === 'settings'} onclick={() => tab = 'settings'}>
       Site Settings
-    </button>
-  </div>
+    </md-primary-tab>
+  </md-tabs>
 
   {#if tab === 'reports'}
     {#if reports.length === 0}
@@ -330,20 +330,20 @@
                         onclick={() => updateReport(r.id, 'resolved')}>Resolve</button>
                     {/if}
                     {#if r.status !== 'dismissed'}
-                      <button class="btn btn-secondary btn-sm"
-                        onclick={() => updateReport(r.id, 'dismissed')}>Dismiss</button>
+                      <md-outlined-button class="md-sm"
+                        onclick={() => updateReport(r.id, 'dismissed')}>Dismiss</md-outlined-button>
                     {/if}
                     {#if r.status !== 'pending'}
-                      <button class="btn btn-ghost btn-sm"
-                        onclick={() => updateReport(r.id, 'pending')}>Reopen</button>
+                      <md-text-button class="md-sm"
+                        onclick={() => updateReport(r.id, 'pending')}>Reopen</md-text-button>
                     {/if}
                     {#if r.reported_username}
                       {@const reportedUser = users.find(u => u.username === r.reported_username)}
                       {#if reportedUser}
-                        <button class="btn btn-danger btn-sm"
+                        <md-filled-button class="md-danger md-sm"
                           onclick={() => toggleBan(reportedUser)}>
                           {reportedUser.is_banned ? 'Unban' : 'Ban user'}
-                        </button>
+                        </md-filled-button>
                       {/if}
                     {/if}
                   </div>
@@ -391,22 +391,22 @@
                       onclick={() => toggleBan(u)}>
                       {u.is_banned ? 'Unban' : 'Ban'}
                     </button>
-                    <button class="btn btn-secondary btn-sm" onclick={() => toggleAdmin(u)}>
+                    <md-outlined-button class="md-sm" onclick={() => toggleAdmin(u)}>
                       {u.is_admin ? 'Revoke admin' : 'Make admin'}
-                    </button>
+                    </md-outlined-button>
                   {:else}
                     <span style="font-size:12px;color:var(--text-muted)">(you)</span>
                   {/if}
-                  <button class="btn btn-ghost btn-sm" onclick={() => resetAiUsage(u)}
+                  <md-text-button class="md-sm" onclick={() => resetAiUsage(u)}
                     title="Reset today's AI message limit">
                     Reset AI limit
-                  </button>
-                  <button class="btn btn-ghost btn-sm" onclick={() => openBadgeModal(u)}>
-                    <i class="fa-solid fa-medal"></i> Badges
-                  </button>
-                  <button class="btn btn-ghost btn-sm" onclick={() => { msgModalUser = u; msgTitle = ''; msgBody = ''; }}>
-                    <i class="fa-solid fa-envelope"></i> Message
-                  </button>
+                  </md-text-button>
+                  <md-text-button class="md-sm" onclick={() => openBadgeModal(u)}>
+                    <i slot="icon" class="fa-solid fa-medal"></i> Badges
+                  </md-text-button>
+                  <md-text-button class="md-sm" onclick={() => { msgModalUser = u; msgTitle = ''; msgBody = ''; }}>
+                    <i slot="icon" class="fa-solid fa-envelope"></i> Message
+                  </md-text-button>
                 </div>
               </td>
             </tr>
@@ -463,9 +463,9 @@
           <input id="b-btn-url" type="url" bind:value={bannerBtnUrl} placeholder="https://..." />
         </div>
       </div>
-      <button class="btn btn-primary" onclick={saveBanner} disabled={bannerSaving}>
+      <md-filled-button onclick={saveBanner} disabled={bannerSaving}>
         {bannerSaving ? 'Saving…' : 'Save banner'}
-      </button>
+      </md-filled-button>
     </div>
   {/if}
 
@@ -503,26 +503,26 @@
                 <td style="white-space:nowrap;color:var(--text-muted)">{new Date(f.created_at).toLocaleDateString()}</td>
                 <td>
                   <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
-                    <button class="btn btn-sm" style="background:var(--accent);color:#fff"
+                    <md-filled-button class="md-sm"
                       onclick={() => { replyFeedback = f; replyText = ''; }}>
-                      <i class="fa-solid fa-reply"></i> Reply
-                    </button>
+                      <i slot="icon" class="fa-solid fa-reply"></i> Reply
+                    </md-filled-button>
                     {#if f.status === 'unread'}
-                      <button class="btn btn-secondary btn-sm" onclick={() => updateFeedback(f.id, 'read')}>Mark read</button>
+                      <md-outlined-button class="md-sm" onclick={() => updateFeedback(f.id, 'read')}>Mark read</md-outlined-button>
                     {/if}
                     {#if f.status !== 'resolved'}
                       <button class="btn btn-sm" style="background:var(--success);color:#fff"
                         onclick={() => updateFeedback(f.id, 'resolved')}>Resolve</button>
                     {/if}
                     {#if f.status !== 'unread'}
-                      <button class="btn btn-ghost btn-sm" onclick={() => updateFeedback(f.id, 'unread')}>Mark unread</button>
+                      <md-text-button class="md-sm" onclick={() => updateFeedback(f.id, 'unread')}>Mark unread</md-text-button>
                     {/if}
                     {#if f.username}
                       {@const fbUser = users.find(u => u.username === f.username)}
                       {#if fbUser && fbUser.id !== $user?.id}
-                        <button class="btn btn-danger btn-sm" onclick={() => toggleBan(fbUser)}>
+                        <md-filled-button class="md-danger md-sm" onclick={() => toggleBan(fbUser)}>
                           {fbUser.is_banned ? 'Unban' : 'Ban user'}
-                        </button>
+                        </md-filled-button>
                       {/if}
                     {/if}
                   </div>
@@ -551,11 +551,11 @@
                 <td style="font-size:12px;color:var(--text-muted)">{relTime(r.created_at)}</td>
                 <td>
                   <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
-                    <button class="btn btn-secondary btn-sm" onclick={() => openDmReport(r.id)}>
-                      <i class="fa-solid fa-eye"></i> View
-                    </button>
+                    <md-outlined-button class="md-sm" onclick={() => openDmReport(r.id)}>
+                      <i slot="icon" class="fa-solid fa-eye"></i> View
+                    </md-outlined-button>
                     {#if r.status === 'pending'}
-                      <button class="btn btn-ghost btn-sm" onclick={() => resolveDmReport(r.id, 'dismissed')}>Dismiss</button>
+                      <md-text-button class="md-sm" onclick={() => resolveDmReport(r.id, 'dismissed')}>Dismiss</md-text-button>
                     {/if}
                   </div>
                 </td>
@@ -584,20 +584,17 @@
               {dmsGlobalEnabled ? 'DMs are ON — users can send and receive messages.' : 'DMs are OFF — all DM functionality is hidden and blocked.'}
             </div>
           </div>
-          <button
-            onclick={() => dmsGlobalEnabled = !dmsGlobalEnabled}
-            style="flex-shrink:0;width:44px;height:24px;border-radius:999px;border:none;cursor:pointer;position:relative;padding:0;transition:background 0.2s;background:{dmsGlobalEnabled ? 'var(--accent)' : 'var(--danger)'}"
+          <md-switch icons selected={dmsGlobalEnabled}
+            onchange={(e: Event) => dmsGlobalEnabled = (e.currentTarget as HTMLElement & { selected: boolean }).selected}
             title={dmsGlobalEnabled ? 'Click to disable DMs' : 'Click to enable DMs'}
-          >
-            <span style="position:absolute;top:3px;left:{dmsGlobalEnabled ? '23px' : '3px'};width:18px;height:18px;background:#fff;border-radius:50%;transition:left 0.2s;display:block"></span>
-          </button>
+            aria-label="Direct Messages enabled"></md-switch>
         </div>
       </div>
 
       <div style="display:flex;align-items:center;gap:1rem">
-        <button class="btn btn-primary" onclick={saveSiteSettings} disabled={settingsSaving}>
+        <md-filled-button onclick={saveSiteSettings} disabled={settingsSaving}>
           {settingsSaving ? 'Saving…' : 'Save Settings'}
-        </button>
+        </md-filled-button>
         {#if settingsMsg}
           <span style="font-size:13px;color:{settingsMsg.startsWith('✓') ? 'var(--success)' : 'var(--danger)'}">{settingsMsg}</span>
         {/if}
@@ -634,13 +631,13 @@
             </div>
           {/if}
           <div class="modal-actions">
-            <button class="btn btn-ghost" onclick={() => dmReportModalId = null}>Close</button>
+            <md-text-button onclick={() => dmReportModalId = null}>Close</md-text-button>
             {#if rep.status === 'pending'}
-              <button class="btn btn-ghost btn-sm" onclick={() => resolveDmReport(dmReportModalId!, 'dismissed')}>Dismiss</button>
+              <md-text-button class="md-sm" onclick={() => resolveDmReport(dmReportModalId!, 'dismissed')}>Dismiss</md-text-button>
               {#each users.filter(u => u.username === (rep.user1_username === rep.reporter_username ? rep.user2_username : rep.user1_username) && u.id !== $user?.id) as repUser}
-                <button class="btn btn-danger btn-sm" onclick={async () => { await toggleBan(repUser); resolveDmReport(dmReportModalId!, 'resolved'); }}>
+                <md-filled-button class="md-danger md-sm" onclick={async () => { await toggleBan(repUser); resolveDmReport(dmReportModalId!, 'resolved'); }}>
                   {repUser.is_banned ? 'Unban' : 'Ban user'} & Resolve
-                </button>
+                </md-filled-button>
               {/each}
             {/if}
           </div>
@@ -664,7 +661,7 @@
             </span>
             <span style="flex:1;font-size:12px;color:var(--text-muted)">{def.description}</span>
             {#if owned}
-              <button class="btn btn-danger btn-sm" onclick={() => revokeBadge(def.id)}>Revoke</button>
+              <md-filled-button class="md-danger md-sm" onclick={() => revokeBadge(def.id)}>Revoke</md-filled-button>
             {:else}
               <button class="btn btn-sm" style="background:var(--success);color:#fff" onclick={() => awardBadge(def.id)}>Award</button>
             {/if}
@@ -690,10 +687,10 @@
         <textarea id="reply-text" bind:value={replyText} rows={4} placeholder="Write your response…" style="resize:vertical"></textarea>
       </div>
       <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
-        <button class="btn btn-secondary" onclick={() => replyFeedback = null}>Cancel</button>
-        <button class="btn btn-primary" disabled={replySending || !replyText.trim()} onclick={sendReply}>
+        <md-outlined-button onclick={() => replyFeedback = null}>Cancel</md-outlined-button>
+        <md-filled-button disabled={replySending || !replyText.trim()} onclick={sendReply}>
           {replySending ? 'Sending…' : 'Send reply'}
-        </button>
+        </md-filled-button>
       </div>
     {/if}
   {/snippet}
@@ -715,10 +712,10 @@
         <textarea id="msg-body" bind:value={msgBody} rows={4} placeholder="Your message…" style="resize:vertical"></textarea>
       </div>
       <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.5rem">
-        <button class="btn btn-secondary" onclick={() => msgModalUser = null}>Cancel</button>
-        <button class="btn btn-primary" disabled={msgSending || !msgTitle.trim() || !msgBody.trim()} onclick={sendUserMessage}>
+        <md-outlined-button onclick={() => msgModalUser = null}>Cancel</md-outlined-button>
+        <md-filled-button disabled={msgSending || !msgTitle.trim() || !msgBody.trim()} onclick={sendUserMessage}>
           {msgSending ? 'Sending…' : 'Send message'}
-        </button>
+        </md-filled-button>
       </div>
     {/if}
   {/snippet}

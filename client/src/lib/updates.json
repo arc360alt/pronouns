@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.8.0",
+    "date": "2026-10-06",
+    "title": "Material You Redesign",
+    "changes": [
+      "The whole site has been redesigned with Google's Material Design 3 (Material You) — new buttons, cards, text fields, chips, dialogs, tabs, switches and Roboto typography",
+      "Ripple effects on buttons, links, cards and navigation items",
+      "New color scheme picker in Settings — choose from the Material color palette or any custom color and a full Material You palette is generated for both light and dark mode",
+      "Pick a scheme style for your colors: Tonal spot, Vibrant, Expressive, Fidelity, Content, Neutral or Monochrome, with a live preview",
+      "Profiles are now themed with a Material You palette generated from the owner's accent color — backgrounds, the top bar and buttons all match the profile",
+      "New mobile bottom navigation bar like Android apps — shows as many pages as fit on your screen, with a More sheet for the rest, theme toggle and log out",
+      "Unread badges for notifications and messages in the navigation bars",
+      "Top bar now highlights the page you're on",
+      "Profile editor tabs now fit on mobile screens, including Save Slots",
+      "Toggles for DM requests and the admin DM switch are now Material switches",
+      "Fixed the repeated /sw.js requests left behind by old service workers"
+    ]
+  },
+  {
     "version": "1.7.0",
     "date": "2026-08-14",
     "title": "Likes, Section Labels & UI Refresh",

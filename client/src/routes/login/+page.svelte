@@ -106,17 +106,15 @@
 
 <svelte:head><title>Log in — pronouns</title></svelte:head>
 
-<div class="container" style="max-width:400px">
+<div class="container auth-page">
   <h1 class="page-title">Log in</h1>
   <div class="card">
     <form onsubmit={handleSubmit}>
       <div class="form-group">
-        <label class="form-label" for="login">Username or email</label>
-        <input id="login" type="text" bind:value={login} autocomplete="username" required />
+        <md-outlined-text-field label="Username or email" type="text" value={login} oninput={(e: Event) => login = (e.currentTarget as HTMLInputElement).value} autocomplete="username" required></md-outlined-text-field>
       </div>
       <div class="form-group">
-        <label class="form-label" for="password">Password</label>
-        <input id="password" type="password" bind:value={password} autocomplete="current-password" required />
+        <md-outlined-text-field label="Password" type="password" value={password} oninput={(e: Event) => password = (e.currentTarget as HTMLInputElement).value} autocomplete="current-password" required></md-outlined-text-field>
       </div>
       {#if turnstileEnabled}
       <div class="form-group" style="display:flex;justify-content:center">
@@ -124,13 +122,13 @@
       </div>
       {/if}
       {#if error}<p class="msg-error">{error}</p>{/if}
-      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem" disabled={loading}>
+      <md-filled-button type="submit" style="width:100%;margin-top:0.5rem" disabled={loading}>
         {loading ? 'Logging in…' : 'Log in'}
-      </button>
+      </md-filled-button>
     </form>
 
     {#if googleClientId}
-      <hr style="margin:1rem 0" />
+      <md-divider style="margin:1.25rem 0"></md-divider>
       <p style="text-align:center;font-size:14px;color:var(--text-muted);margin-bottom:0.75rem">or sign in with</p>
       <div style="display:flex;justify-content:center">
         <div bind:this={googleBtnContainer}></div>

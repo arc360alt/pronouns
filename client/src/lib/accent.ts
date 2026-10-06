@@ -1,24 +1,105 @@
-export const DEFAULT_ACCENT = '#22c5e0';
+import {
+  Blend,
+  DynamicScheme,
+  Hct,
+  MaterialDynamicColors,
+  SchemeContent,
+  SchemeExpressive,
+  SchemeFidelity,
+  SchemeMonochrome,
+  SchemeNeutral,
+  SchemeTonalSpot,
+  SchemeVibrant,
+  argbFromHex,
+  hexFromArgb,
+} from '@material/material-color-utilities';
+
+// Material Design color palette (500 shades) used as Material You seed colors.
+export const DEFAULT_ACCENT = '#00bcd4';
 
 export const ACCENT_PRESETS = [
-  { name: 'Cyan',    hex: '#22c5e0' },
-  { name: 'Violet',  hex: '#9b7fe8' },
-  { name: 'Rose',    hex: '#e2547a' },
-  { name: 'Indigo',  hex: '#6b7ff0' },
-  { name: 'Emerald', hex: '#34d399' },
-  { name: 'Amber',   hex: '#f59e0b' },
+  { name: 'Baseline',    hex: '#6750a4' },
+  { name: 'Red',         hex: '#f44336' },
+  { name: 'Pink',        hex: '#e91e63' },
+  { name: 'Purple',      hex: '#9c27b0' },
+  { name: 'Deep Purple', hex: '#673ab7' },
+  { name: 'Indigo',      hex: '#3f51b5' },
+  { name: 'Blue',        hex: '#2196f3' },
+  { name: 'Light Blue',  hex: '#03a9f4' },
+  { name: 'Cyan',        hex: '#00bcd4' },
+  { name: 'Teal',        hex: '#009688' },
+  { name: 'Green',       hex: '#4caf50' },
+  { name: 'Light Green', hex: '#8bc34a' },
+  { name: 'Lime',        hex: '#cddc39' },
+  { name: 'Yellow',      hex: '#ffeb3b' },
+  { name: 'Amber',       hex: '#ffc107' },
+  { name: 'Orange',      hex: '#ff9800' },
+  { name: 'Deep Orange', hex: '#ff5722' },
+  { name: 'Brown',       hex: '#795548' },
+  { name: 'Blue Grey',   hex: '#607d8b' },
 ];
 
-function hexToRgb(hex: string): [number, number, number] | null {
-  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-  if (!m) return null;
-  return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+export type SchemeVariant = 'tonal_spot' | 'vibrant' | 'expressive' | 'fidelity' | 'content' | 'neutral' | 'monochrome';
+export const DEFAULT_VARIANT: SchemeVariant = 'tonal_spot';
+
+export const SCHEME_VARIANTS: { id: SchemeVariant; name: string; description: string }[] = [
+  { id: 'tonal_spot', name: 'Tonal spot', description: 'Calm, the Material You default' },
+  { id: 'vibrant',    name: 'Vibrant',    description: 'Saturated and colorful' },
+  { id: 'expressive', name: 'Expressive', description: 'Playful, shifts hues' },
+  { id: 'fidelity',   name: 'Fidelity',   description: 'Stays true to the seed' },
+  { id: 'content',    name: 'Content',    description: 'Matches the seed closely' },
+  { id: 'neutral',    name: 'Neutral',    description: 'Muted, near-greyscale' },
+  { id: 'monochrome', name: 'Monochrome', description: 'Pure greyscale' },
+];
+
+const SCHEMES: Record<SchemeVariant, new (hct: Hct, isDark: boolean, contrast: number) => DynamicScheme> = {
+  tonal_spot: SchemeTonalSpot,
+  vibrant: SchemeVibrant,
+  expressive: SchemeExpressive,
+  fidelity: SchemeFidelity,
+  content: SchemeContent,
+  neutral: SchemeNeutral,
+  monochrome: SchemeMonochrome,
+};
+
+// M3 color roles emitted as --md-sys-color-<role>.
+const ROLES = [
+  'primary', 'onPrimary', 'primaryContainer', 'onPrimaryContainer', 'inversePrimary',
+  'secondary', 'onSecondary', 'secondaryContainer', 'onSecondaryContainer',
+  'tertiary', 'onTertiary', 'tertiaryContainer', 'onTertiaryContainer',
+  'error', 'onError', 'errorContainer', 'onErrorContainer',
+  'background', 'onBackground', 'surface', 'onSurface', 'surfaceVariant', 'onSurfaceVariant',
+  'surfaceDim', 'surfaceBright', 'surfaceContainerLowest', 'surfaceContainerLow',
+  'surfaceContainer', 'surfaceContainerHigh', 'surfaceContainerHighest',
+  'inverseSurface', 'inverseOnSurface', 'outline', 'outlineVariant', 'shadow', 'scrim', 'surfaceTint',
+] as const;
+
+const kebab = (s: string) => s.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
+
+function isHex(hex: string) {
+  return /^#[0-9a-f]{6}$/i.test(hex);
 }
 
-function darken(hex: string, by: number): string {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return hex;
-  return '#' + rgb.map(v => Math.max(0, v - by).toString(16).padStart(2, '0')).join('');
+export function buildScheme(hex: string, variant: SchemeVariant, isDark: boolean): DynamicScheme {
+  const Ctor = SCHEMES[variant] ?? SchemeTonalSpot;
+  return new Ctor(Hct.fromInt(argbFromHex(isHex(hex) ? hex : DEFAULT_ACCENT)), isDark, 0);
+}
+
+export function schemeColor(scheme: DynamicScheme, role: (typeof ROLES)[number]): string {
+  return hexFromArgb(MaterialDynamicColors[role].getArgb(scheme));
+}
+
+function schemeToCss(scheme: DynamicScheme, seed: number): string {
+  const lines = ROLES.map(r => `--md-sys-color-${kebab(r)}:${schemeColor(scheme, r)};`);
+  // Custom colors harmonized toward the seed, per the M3 custom-color guidance.
+  const tone = scheme.isDark ? 80 : 40;
+  const custom = (base: string) => {
+    const h = Hct.fromInt(Blend.harmonize(argbFromHex(base), seed));
+    return hexFromArgb(Hct.from(h.hue, Math.max(h.chroma, 48), tone).toInt());
+  };
+  lines.push(`--md-ext-color-success:${custom('#4caf50')};`);
+  lines.push(`--md-ext-color-warning:${custom('#ff9800')};`);
+  return lines.join('');
 }
 
 const LOGO_STAR_MED  = '#a87ce8';
@@ -43,16 +124,31 @@ function updateFavicon(accent: string) {
   link.href = uri;
 }
 
-export function applyAccent(hex: string) {
-  if (typeof document === 'undefined') return;
-  const rgb = hexToRgb(hex);
-  if (!rgb) return;
-  const root = document.documentElement;
-  root.style.setProperty('--accent', hex);
-  root.style.setProperty('--accent-hover', darken(hex, 20));
-  root.style.setProperty('--accent-subtle', `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.15)`);
-  root.style.setProperty('--accent-bg', hex);
-  updateFavicon(hex);
+function readVariant(): SchemeVariant {
+  const v = typeof localStorage !== 'undefined' ? localStorage.getItem('accent_variant') : null;
+  return v && v in SCHEMES ? (v as SchemeVariant) : DEFAULT_VARIANT;
+}
+
+// Generates full light + dark Material You schemes from a seed color and
+// injects them as --md-sys-color-* tokens keyed off [data-theme].
+export function applyAccent(hex: string, variant: SchemeVariant = readVariant()) {
+  if (typeof document === 'undefined' || !isHex(hex)) return;
+  const seed = argbFromHex(hex);
+  const light = buildScheme(hex, variant, false);
+  const dark = buildScheme(hex, variant, true);
+
+  let el = document.getElementById('md-dynamic-theme') as HTMLStyleElement | null;
+  if (!el) {
+    el = document.createElement('style');
+    el.id = 'md-dynamic-theme';
+    document.head.appendChild(el);
+  }
+  el.textContent =
+    `:root,[data-theme="dark"]{${schemeToCss(dark, seed)}}` +
+    `[data-theme="light"]{${schemeToCss(light, seed)}}`;
+
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  updateFavicon(schemeColor(isDark ? dark : light, 'primary'));
 }
 
 export function loadSavedAccent() {
@@ -61,7 +157,44 @@ export function loadSavedAccent() {
   return saved || DEFAULT_ACCENT;
 }
 
+export function loadSavedVariant(): SchemeVariant {
+  return readVariant();
+}
+
 export function saveAccent(hex: string) {
   if (typeof localStorage !== 'undefined') localStorage.setItem('accent_color', hex);
   applyAccent(hex);
+}
+
+export function saveVariant(variant: SchemeVariant) {
+  if (typeof localStorage !== 'undefined') localStorage.setItem('accent_variant', variant);
+  applyAccent(localStorage.getItem('accent_color') || DEFAULT_ACCENT, variant);
+}
+
+// Re-themes the whole page from a profile's custom color while that profile is
+// shown. Uses doubled :root selectors so it outranks the viewer's own theme
+// regardless of injection order. Pass null to restore the viewer's theme.
+export function applyProfileTheme(hex: string | null, hex2?: string | null, dir = '135deg') {
+  if (typeof document === 'undefined') return;
+  const existing = document.getElementById('md-profile-theme');
+  if (!hex || !isHex(hex)) { existing?.remove(); return; }
+
+  const seed = argbFromHex(hex);
+  const block = (isDark: boolean) => {
+    const scheme = buildScheme(hex, 'tonal_spot', isDark);
+    let css = schemeToCss(scheme, seed);
+    if (hex2 && isHex(hex2)) {
+      const p1 = schemeColor(scheme, 'primary');
+      const p2 = schemeColor(buildScheme(hex2, 'tonal_spot', isDark), 'primary');
+      css += `--accent-bg:linear-gradient(${dir}, ${p1}, ${p2});`;
+    }
+    return css;
+  };
+
+  const el = (existing as HTMLStyleElement | null) ?? document.createElement('style');
+  el.id = 'md-profile-theme';
+  el.textContent =
+    `:root:root,:root:root[data-theme="dark"]{${block(true)}}` +
+    `:root:root[data-theme="light"]{${block(false)}}`;
+  if (!existing) document.head.appendChild(el);
 }

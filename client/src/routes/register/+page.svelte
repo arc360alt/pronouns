@@ -107,23 +107,20 @@
 
 <svelte:head><title>Register — pronouns</title></svelte:head>
 
-<div class="container" style="max-width:400px">
+<div class="container auth-page">
   <h1 class="page-title">Create account</h1>
   <div class="card">
     <form onsubmit={handleSubmit}>
       <div class="form-group">
-        <label class="form-label" for="username">Username</label>
-        <input id="username" type="text" bind:value={username} autocomplete="username"
-          placeholder="letters, numbers, _ and -" required minlength="3" maxlength="30" />
+        <md-outlined-text-field label="Username" type="text" value={username} oninput={(e: Event) => username = (e.currentTarget as HTMLInputElement).value} autocomplete="username"
+          supporting-text="Letters, numbers, _ and -" required minlength="3" maxlength="30"></md-outlined-text-field>
       </div>
       <div class="form-group">
-        <label class="form-label" for="email">Email</label>
-        <input id="email" type="email" bind:value={email} autocomplete="email" required />
+        <md-outlined-text-field label="Email" type="email" value={email} oninput={(e: Event) => email = (e.currentTarget as HTMLInputElement).value} autocomplete="email" required></md-outlined-text-field>
       </div>
       <div class="form-group">
-        <label class="form-label" for="password">Password</label>
-        <input id="password" type="password" bind:value={password} autocomplete="new-password"
-          placeholder="at least 8 characters" required minlength="8" />
+        <md-outlined-text-field label="Password" type="password" value={password} oninput={(e: Event) => password = (e.currentTarget as HTMLInputElement).value} autocomplete="new-password"
+          supporting-text="At least 8 characters" required minlength="8"></md-outlined-text-field>
       </div>
       {#if turnstileEnabled}
       <div class="form-group" style="display:flex;justify-content:center">
@@ -131,13 +128,13 @@
       </div>
       {/if}
       {#if error}<p class="msg-error">{error}</p>{/if}
-      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem" disabled={loading}>
+      <md-filled-button type="submit" style="width:100%;margin-top:0.5rem" disabled={loading}>
         {loading ? 'Creating account…' : 'Create account'}
-      </button>
+      </md-filled-button>
     </form>
 
     {#if googleClientId}
-      <hr style="margin:1rem 0" />
+      <md-divider style="margin:1.25rem 0"></md-divider>
       <p style="text-align:center;font-size:14px;color:var(--text-muted);margin-bottom:0.75rem">or sign up with</p>
       <div style="display:flex;justify-content:center">
         <div bind:this={googleBtnContainer}></div>

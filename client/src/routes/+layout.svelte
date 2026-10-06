@@ -1,6 +1,8 @@
 <script lang="ts">
   import '../app.css';
+  import { startAutoRipple } from '$lib/material';
   import Navbar from '$lib/components/Navbar.svelte';
+  import BottomNav from '$lib/components/BottomNav.svelte';
   import SiteBanner from '$lib/components/SiteBanner.svelte';
   import { user, theme, userReady, notifUnread, dmUnread, dmsEnabled } from '$lib/stores';
   import { loadSavedAccent } from '$lib/accent';
@@ -39,6 +41,7 @@
     theme.set(saved);
     document.documentElement.setAttribute('data-theme', saved);
     loadSavedAccent();
+    startAutoRipple();
 
     try { bannerDismissed = sessionStorage.getItem('banner_dismissed') === '1'; } catch {}
 
@@ -90,3 +93,5 @@
     {/if}
   </div>
 </footer>
+
+<BottomNav />

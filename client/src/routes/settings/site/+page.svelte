@@ -278,9 +278,9 @@
         <div style="margin-top:0.75rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
           <span style="font-size:13px;color:var(--text-muted)">Your site URL:</span>
           <code style="font-size:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:4px;padding:0.15rem 0.5rem">{siteUrl}</code>
-          <a href={siteUrl} target="_blank" rel="noopener" class="btn btn-ghost btn-sm">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
-          </a>
+          <md-text-button href={siteUrl} target="_blank" rel="noopener" class="md-sm">
+            <i slot="icon" class="fa-solid fa-arrow-up-right-from-square"></i> Open
+          </md-text-button>
         </div>
       {/if}
     </div>
@@ -340,10 +340,10 @@
                   </div>
                   {#if newFileErr}<p style="font-size:11px;color:var(--danger)">{newFileErr}</p>{/if}
                   <div style="display:flex;gap:0.3rem">
-                    <button class="btn btn-primary btn-sm" style="flex:1;font-size:12px" onclick={addFile} disabled={!newBaseName.trim()}>
+                    <md-filled-button class="md-sm" style="flex:1" onclick={addFile} disabled={!newBaseName.trim()}>
                       Create
-                    </button>
-                    <button class="btn btn-ghost btn-sm" style="font-size:12px" onclick={cancelAdd}>✕</button>
+                    </md-filled-button>
+                    <md-icon-button aria-label="Cancel" onclick={cancelAdd}><i class="fa-solid fa-xmark"></i></md-icon-button>
                   </div>
                 </div>
               {:else}
@@ -351,9 +351,9 @@
                   {#each (['html', 'css', 'js'] as const) as ext}
                     {@const count = ext === 'html' ? htmlCount : ext === 'css' ? cssCount : jsCount}
                     {@const atLimit = count >= LIMITS[ext]}
-                    <button
-                      class="btn btn-ghost btn-sm"
-                      style="width:100%;font-size:12px;justify-content:space-between;opacity:{atLimit ? 0.4 : 1}"
+                    <md-text-button
+                      class="md-sm"
+                      style="width:100%"
                       onclick={() => { if (!atLimit) { addingFileType = ext; newFileErr = ''; } }}
                       disabled={atLimit}
                       title={atLimit ? `Limit reached (${LIMITS[ext]} max)` : `New .${ext} file`}
@@ -363,7 +363,7 @@
                            style="color:{ext === 'html' ? 'var(--accent)' : ext === 'css' ? '#7ec8e3' : '#f7df1e'};margin-right:0.3rem"></i>.{ext}
                       </span>
                       <span style="color:var(--text-muted)">{count}/{LIMITS[ext]}</span>
-                    </button>
+                    </md-text-button>
                   {/each}
                 </div>
               {/if}
@@ -398,9 +398,9 @@
                   {#if aiRemaining !== null}
                     <span style="font-size:11px;color:var(--text-muted)">{aiRemaining} msg{aiRemaining === 1 ? '' : 's'} left today</span>
                   {/if}
-                  <button class="btn btn-ghost btn-sm" style="font-size:12px" onclick={() => aiOpen = false}>
-                    <i class="fa-solid fa-xmark"></i> Editor
-                  </button>
+                  <md-text-button class="md-sm" onclick={() => aiOpen = false}>
+                    <i slot="icon" class="fa-solid fa-xmark"></i> Editor
+                  </md-text-button>
                 </div>
               </div>
 
@@ -408,7 +408,7 @@
               <div bind:this={chatContainer} style="flex:1;overflow-y:auto;padding:0.75rem;display:flex;flex-direction:column;gap:0.6rem">
                 {#each chatMessages as m}
                   <div style="display:flex;flex-direction:column;align-items:{m.role === 'user' ? 'flex-end' : 'flex-start'};gap:0.25rem">
-                    <div style="max-width:88%;background:{m.role === 'user' ? 'var(--accent)' : 'var(--bg-input)'};color:{m.role === 'user' ? '#fff' : 'var(--text)'};border-radius:10px;padding:0.5rem 0.75rem;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word">
+                    <div style="max-width:88%;background:{m.role === 'user' ? 'var(--accent)' : 'var(--bg-input)'};color:{m.role === 'user' ? 'var(--on-accent)' : 'var(--text)'};border-radius:10px;padding:0.5rem 0.75rem;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word">
                       {m.text}
                     </div>
                     {#if m.actions && m.actions.length > 0}
@@ -442,9 +442,9 @@
                   style="flex:1;font-size:13px"
                   onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) sendChat(); }}
                 />
-                <button class="btn btn-primary btn-sm" aria-label="Send" onclick={sendChat} disabled={chatLoading || !chatInput.trim() || aiRemaining === 0}>
-                  <i class="fa-solid fa-paper-plane"></i>
-                </button>
+                <md-filled-icon-button aria-label="Send" onclick={sendChat} disabled={chatLoading || !chatInput.trim() || aiRemaining === 0}>
+                  <i class="fa-solid fa-paper-plane" style="font-size:16px"></i>
+                </md-filled-icon-button>
               </div>
             {:else}
               <!-- ── Monaco editor ── -->
@@ -456,15 +456,15 @@
                     {#if dirty}<span style="font-size:11px;color:var(--text-muted);margin-left:0.3rem">(unsaved)</span>{/if}
                   </span>
                   <div style="display:flex;gap:0.4rem;flex-shrink:0">
-                    <button class="btn btn-ghost btn-sm" onclick={() => previewOpen = !previewOpen}
-                      title="{previewOpen ? 'Hide preview' : 'Show preview'}" style="font-size:12px">
-                      <i class="fa-solid fa-{previewOpen ? 'eye-slash' : 'eye'}"></i>
+                    <md-text-button class="md-sm" onclick={() => previewOpen = !previewOpen}
+                      title="{previewOpen ? 'Hide preview' : 'Show preview'}">
+                      <i slot="icon" class="fa-solid fa-{previewOpen ? 'eye-slash' : 'eye'}"></i>
                       {previewOpen ? 'Hide preview' : 'Preview'}
-                    </button>
-                    <button class="btn btn-primary btn-sm" onclick={saveFile} disabled={saving || !dirty}>
-                      <i class="fa-solid fa-floppy-disk"></i>
+                    </md-text-button>
+                    <md-filled-button class="md-sm" onclick={saveFile} disabled={saving || !dirty}>
+                      <i slot="icon" class="fa-solid fa-floppy-disk"></i>
                       {saving ? 'Saving…' : 'Save'}
-                    </button>
+                    </md-filled-button>
                   </div>
                 </div>
                 <div style="flex:1;min-height:0">
@@ -495,9 +495,9 @@
               <i class="fa-solid fa-eye" style="margin-right:0.35rem"></i>Preview
             </span>
             {#if previewUrl}
-              <a href={previewUrl} target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="font-size:11px">
-                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open
-              </a>
+              <md-text-button href={previewUrl} target="_blank" rel="noopener" class="md-sm">
+                <i slot="icon" class="fa-solid fa-arrow-up-right-from-square"></i> Open
+              </md-text-button>
             {/if}
           </div>
           {#if previewUrl}

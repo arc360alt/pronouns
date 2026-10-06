@@ -8,6 +8,7 @@
   import PixLoader from '$lib/components/PixLoader.svelte';
   import type { Profile } from '$lib/types';
   import { renderMarkdown } from '$lib/markdown';
+  import { applyProfileTheme } from '$lib/accent';
 
   const isVideo = (url?: string | null) => !!(url && url.toLowerCase().endsWith('.mp4'));
 
@@ -195,6 +196,7 @@
   let hadForcedTheme = false;
 
   onDestroy(() => {
+    applyProfileTheme(null);
     if (hadForcedTheme && typeof document !== 'undefined') {
       // Restore to whatever the user's actual preference currently is
       document.documentElement.setAttribute('data-theme', get(theme));
@@ -254,6 +256,7 @@
     likeCount = 0;
     likedByMe = false;
     customStyle = '';
+    applyProfileTheme(null);
     // Restore theme before loading new profile in case previous had forced_theme
     if (hadForcedTheme && typeof document !== 'undefined') {
       document.documentElement.setAttribute('data-theme', get(theme));
@@ -268,16 +271,8 @@
         document.documentElement.setAttribute('data-theme', data.forced_theme);
         forcedThemeStore.set(data.forced_theme as 'dark' | 'light');
       }
-      if (data.custom_color) {
-        const c = data.custom_color;
-        let subtle = 'rgba(224,122,39,0.15)';
-        const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c);
-        if (m) subtle = `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},0.15)`;
-        const accentBg = data.custom_color_2
-          ? `linear-gradient(${data.custom_color_dir || '135deg'}, ${c}, ${data.custom_color_2})`
-          : c;
-        customStyle = `--accent:${c};--accent-hover:${c};--accent-subtle:${subtle};--accent-bg:${accentBg};`;
-      }
+      // Material You scheme generated from the profile's color themes the whole page
+      applyProfileTheme(data.custom_color, data.custom_color_2, data.custom_color_dir || '135deg');
       customStyle += bgTextContrast(data);
       try {
         const likes = await api.get<{ count: number; liked_by_me: boolean }>(`/api/users/${username}/likes`);
@@ -352,13 +347,13 @@
   <div class="container error-page">
     <h2>Account suspended</h2>
     <p>This account has been suspended for violating community guidelines.</p>
-    <a href="/" class="btn btn-secondary" style="margin-top:1rem">Go home</a>
+    <md-outlined-button href="/" style="margin-top:1rem">Go home</md-outlined-button>
   </div>
 {:else if notFound || !profile}
   <div class="container error-page">
     <h2>Profile not found</h2>
     <p>This user doesn't exist or their profile is unavailable.</p>
-    <a href="/" class="btn btn-secondary" style="margin-top:1rem">Go home</a>
+    <md-outlined-button href="/" style="margin-top:1rem">Go home</md-outlined-button>
   </div>
 {:else}
   <div
@@ -467,7 +462,7 @@
         {/if}
         <div class="profile-like-row">
           {#if isOwnProfile}
-            <a href="/settings/profile" class="btn btn-secondary btn-sm">Edit profile</a>
+            <md-outlined-button href="/settings/profile" class="md-sm">Edit profile</md-outlined-button>
           {:else}
             <button
               class="profile-like-btn {likedByMe ? 'liked' : ''}"
@@ -627,9 +622,9 @@
       <!-- Actions -->
       {#if !isOwnProfile}
         <div style="margin-top:2rem;padding-bottom:1rem">
-          <button class="btn btn-ghost btn-sm" onclick={() => { reportOpen = true; reportMsg = ''; }}>
+          <md-text-button class="md-sm" onclick={() => { reportOpen = true; reportMsg = ''; }}>
             Report this profile
-          </button>
+          </md-text-button>
         </div>
       {/if}
     </div>
@@ -642,7 +637,7 @@
       {#if reportMsg}
         <p class={reportMsg.includes('submitted') ? 'msg-success' : 'msg-error'}>{reportMsg}</p>
         <div class="modal-actions">
-          <button class="btn btn-secondary" onclick={() => reportOpen = false}>Close</button>
+          <md-outlined-button onclick={() => reportOpen = false}>Close</md-outlined-button>
         </div>
       {:else}
         <form onsubmit={submitReport}>
@@ -656,10 +651,10 @@
             ></textarea>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" onclick={() => reportOpen = false}>Cancel</button>
-            <button type="submit" class="btn btn-danger btn-sm" disabled={reportLoading}>
+            <md-outlined-button type="button" onclick={() => reportOpen = false}>Cancel</md-outlined-button>
+            <md-filled-button type="submit" class="md-danger md-sm" disabled={reportLoading}>
               {reportLoading ? 'Submitting…' : 'Submit report'}
-            </button>
+            </md-filled-button>
           </div>
         </form>
       {/if}
@@ -690,10 +685,10 @@
       </div>
 
       <div class="modal-actions">
-        <button class="btn btn-secondary" onclick={() => { linkWarningOpen = false; pendingLink = ''; }}>Cancel</button>
-        <button class="btn btn-primary" onclick={openPendingLink}>
+        <md-outlined-button onclick={() => { linkWarningOpen = false; pendingLink = ''; }}>Cancel</md-outlined-button>
+        <md-filled-button onclick={openPendingLink}>
           Open <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:11px"></i>
-        </button>
+        </md-filled-button>
       </div>
     </div>
   {/snippet}

@@ -742,6 +742,7 @@
     finally { sectionLabelsSaving = false; }
   }
 
+  let viewportWidth = $state(1024);
   let activeTab = $state<'profile' | 'appearance' | 'content' | 'social' | 'slots'>('profile');
 
   // ── Save Slots ──
@@ -869,6 +870,8 @@
   });
 </script>
 
+<svelte:window bind:innerWidth={viewportWidth} />
+
 <svelte:head><title>Edit Profile — pronouns</title></svelte:head>
 
 {#if loading}
@@ -878,28 +881,28 @@
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
     <h1 class="page-title" style="margin-bottom:0">Edit Profile</h1>
     {#if $user}
-      <a href="/@{$user.username}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> View profile</a>
+      <md-outlined-button href="/@{$user.username}" class="md-sm"><i slot="icon" class="fa-solid fa-arrow-up-right-from-square"></i> View profile</md-outlined-button>
     {/if}
   </div>
 
   <!-- ── Tab nav ── -->
-  <div class="editor-tabs">
-    <button class="editor-tab" class:active={activeTab === 'profile'} onclick={() => activeTab = 'profile'}>
-      <i class="fa-solid fa-user"></i><span>Profile</span>
-    </button>
-    <button class="editor-tab" class:active={activeTab === 'appearance'} onclick={() => activeTab = 'appearance'}>
-      <i class="fa-solid fa-palette"></i><span>Appearance</span>
-    </button>
-    <button class="editor-tab" class:active={activeTab === 'content'} onclick={() => activeTab = 'content'}>
-      <i class="fa-solid fa-layer-group"></i><span>Content</span>
-    </button>
-    <button class="editor-tab" class:active={activeTab === 'social'} onclick={() => activeTab = 'social'}>
-      <i class="fa-solid fa-users"></i><span>Social</span>
-    </button>
-    <button class="editor-tab" class:active={activeTab === 'slots'} onclick={() => activeTab = 'slots'}>
-      <i class="fa-solid fa-floppy-disk"></i><span>Save Slots</span>
-    </button>
-  </div>
+  <md-tabs class="editor-tabs" aria-label="Profile editor sections">
+    <md-primary-tab active={activeTab === 'profile'} inlineIcon={viewportWidth > 640} onclick={() => activeTab = 'profile'}>
+      <i slot="icon" class="fa-solid fa-user"></i>Profile
+    </md-primary-tab>
+    <md-primary-tab active={activeTab === 'appearance'} inlineIcon={viewportWidth > 640} onclick={() => activeTab = 'appearance'}>
+      <i slot="icon" class="fa-solid fa-palette"></i>{viewportWidth > 640 ? 'Appearance' : 'Style'}
+    </md-primary-tab>
+    <md-primary-tab active={activeTab === 'content'} inlineIcon={viewportWidth > 640} onclick={() => activeTab = 'content'}>
+      <i slot="icon" class="fa-solid fa-layer-group"></i>Content
+    </md-primary-tab>
+    <md-primary-tab active={activeTab === 'social'} inlineIcon={viewportWidth > 640} onclick={() => activeTab = 'social'}>
+      <i slot="icon" class="fa-solid fa-users"></i>Social
+    </md-primary-tab>
+    <md-primary-tab active={activeTab === 'slots'} inlineIcon={viewportWidth > 640} onclick={() => activeTab = 'slots'}>
+      <i slot="icon" class="fa-solid fa-floppy-disk"></i>{viewportWidth > 640 ? 'Save Slots' : 'Slots'}
+    </md-primary-tab>
+  </md-tabs>
 
   {#if itemMsg}
     <p class="msg-error" style="margin-bottom:1rem">{itemMsg}</p>
@@ -945,10 +948,10 @@
         <label class="form-label" for="tz">Timezone (shows a live clock on your profile)</label>
         <div style="display:flex;gap:0.5rem">
           <input id="tz" type="text" list="tz-list" bind:value={timezone} placeholder="e.g. America/Chicago" style="flex:1" />
-          <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap"
-            onclick={() => timezone = Intl.DateTimeFormat().resolvedOptions().timeZone}>Detect mine</button>
+          <md-outlined-button type="button" class="md-sm" style="white-space:nowrap"
+            onclick={() => timezone = Intl.DateTimeFormat().resolvedOptions().timeZone}>Detect mine</md-outlined-button>
           {#if timezone}
-            <button type="button" class="btn btn-ghost btn-sm" onclick={() => timezone = ''}>Clear</button>
+            <md-text-button type="button" class="md-sm" onclick={() => timezone = ''}>Clear</md-text-button>
           {/if}
         </div>
         {#if timezone}
@@ -965,9 +968,9 @@
       {#if basicMsg}
         <p class={basicMsg.startsWith('✓') ? 'msg-success' : 'msg-error'}>{basicMsg}</p>
       {/if}
-      <button type="submit" class="btn btn-primary" disabled={basicSaving}>
+      <md-filled-button type="submit" disabled={basicSaving}>
         {basicSaving ? 'Saving…' : 'Save profile'}
-      </button>
+      </md-filled-button>
     </form>
   </div>
 
@@ -979,7 +982,7 @@
         <input id="custom-color" type="color" bind:value={customColor} style="width:48px;height:36px;padding:2px;cursor:pointer;flex:none" />
         <input type="text" bind:value={customColor} placeholder="#e07a27" style="flex:1" />
         {#if customColor}
-          <button type="button" class="btn btn-ghost btn-sm" onclick={() => { customColor = ''; accentGradient = false; customColor2 = ''; }}>Reset</button>
+          <md-text-button type="button" class="md-sm" onclick={() => { customColor = ''; accentGradient = false; customColor2 = ''; }}>Reset</md-text-button>
         {/if}
       </div>
       <label style="display:flex;align-items:center;gap:0.5rem;font-size:13px;cursor:pointer;margin-bottom:0.5rem">
@@ -1030,9 +1033,9 @@
     {#if basicMsg}
       <p class={basicMsg.startsWith('✓') ? 'msg-success' : 'msg-error'}>{basicMsg}</p>
     {/if}
-    <button type="button" class="btn btn-primary" onclick={saveBasic} disabled={basicSaving}>
+    <md-filled-button type="button" onclick={saveBasic} disabled={basicSaving}>
       {basicSaving ? 'Saving…' : 'Save'}
-    </button>
+    </md-filled-button>
   </div>
 
   <!-- ════════════════ APPEARANCE TAB ════════════════ -->
@@ -1067,7 +1070,7 @@
         {:else}
           <img src={profilePicture} alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:1px solid var(--border)" />
         {/if}
-        <button class="btn btn-danger btn-sm" onclick={removeProfilePic}>Remove</button>
+        <md-filled-button class="md-danger md-sm" onclick={removeProfilePic}>Remove</md-filled-button>
       {:else}
         <div style="width:72px;height:72px;border-radius:50%;background:var(--bg-input);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-muted)"><i class="fa-solid fa-user"></i></div>
       {/if}
@@ -1101,7 +1104,7 @@
         </div>
       {/if}
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.25rem;align-items:center">
-        <button class="btn btn-danger btn-sm" onclick={removeBanner}>Remove banner</button>
+        <md-filled-button class="md-danger md-sm" onclick={removeBanner}>Remove banner</md-filled-button>
         <label class="btn btn-secondary btn-sm" style="cursor:pointer">
           {bannerUploading ? 'Uploading…' : 'Replace'}
           <input type="file" accept="image/*,video/mp4" style="display:none" onchange={uploadBanner} disabled={bannerUploading} />
@@ -1138,7 +1141,7 @@
         <input type="text" bind:value={profileBgColor} placeholder="#1a1a2e" style="flex:1" />
       </div>
       <div style="height:40px;border-radius:var(--radius);margin-bottom:0.75rem;{bgPreviewStyle}"></div>
-      <button type="button" class="btn btn-primary btn-sm" onclick={saveBg}>Save background</button>
+      <md-filled-button type="button" class="md-sm" onclick={saveBg}>Save background</md-filled-button>
     {:else if profileBgType === 'gradient'}
       <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:0.75rem">
         <div style="display:flex;align-items:center;gap:0.75rem">
@@ -1159,7 +1162,7 @@
         </div>
         <div style="height:40px;border-radius:var(--radius);{bgPreviewStyle}"></div>
       </div>
-      <button type="button" class="btn btn-primary btn-sm" onclick={saveBg}>Save background</button>
+      <md-filled-button type="button" class="md-sm" onclick={saveBg}>Save background</md-filled-button>
     {:else if profileBgType === 'image'}
       {#if profileBgUrl}
         <div style="height:100px;border-radius:var(--radius);background-image:url({profileBgUrl});background-size:cover;background-position:center;margin-bottom:0.75rem;position:relative">
@@ -1205,7 +1208,7 @@
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:0.75rem">
         <i class="fa-solid fa-circle-info"></i> The video will autoplay muted. Some videos may not be embeddable.
       </p>
-      <button type="button" class="btn btn-primary btn-sm" onclick={saveBg} disabled={!extractYouTubeId(profileBgUrl)}>Save background</button>
+      <md-filled-button type="button" class="md-sm" onclick={saveBg} disabled={!extractYouTubeId(profileBgUrl)}>Save background</md-filled-button>
     {/if}
     {#if profileBgType !== 'none'}
       <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border)">
@@ -1343,9 +1346,9 @@
     {#if basicMsg}
       <p class={basicMsg.startsWith('✓') ? 'msg-success' : 'msg-error'} style="margin-top:0.75rem">{basicMsg}</p>
     {/if}
-    <button type="button" class="btn btn-primary" style="margin-top:0.75rem" onclick={saveBasic} disabled={basicSaving}>
+    <md-filled-button type="button" style="margin-top:0.75rem" onclick={saveBasic} disabled={basicSaving}>
       {basicSaving ? 'Saving…' : 'Save layout'}
-    </button>
+    </md-filled-button>
   </div>
 
   <!-- ════════════════ CONTENT TAB ════════════════ -->
@@ -1372,9 +1375,9 @@
         </div>
       {/each}
     </div>
-    <button class="btn btn-primary btn-sm" onclick={saveSectionLabels} disabled={sectionLabelsSaving}>
+    <md-filled-button class="md-sm" onclick={saveSectionLabels} disabled={sectionLabelsSaving}>
       {sectionLabelsSaved ? 'Saved!' : sectionLabelsSaving ? 'Saving…' : 'Save labels'}
-    </button>
+    </md-filled-button>
   </div>
 
   <!-- Names -->
@@ -1398,7 +1401,7 @@
     <div class="form-row">
       <input type="text" bind:value={newName} placeholder="Add a name…" maxlength="50"
         onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addName())} />
-      <button class="btn btn-secondary btn-sm" onclick={addName} disabled={!newName.trim()}>Add</button>
+      <md-outlined-button class="md-sm" onclick={addName} disabled={!newName.trim()}>Add</md-outlined-button>
     </div>
   </div>
 
@@ -1422,10 +1425,10 @@
       {/each}
     </div>
     <div style="margin-bottom:1rem">
-      <button class="btn btn-secondary btn-sm" onclick={() => presetBrowserOpen = !presetBrowserOpen}>
-        <i class="fa-solid fa-{presetBrowserOpen ? 'chevron-up' : 'list'}"></i>
+      <md-outlined-button class="md-sm" onclick={() => presetBrowserOpen = !presetBrowserOpen}>
+        <i slot="icon" class="fa-solid fa-{presetBrowserOpen ? 'chevron-up' : 'list'}"></i>
         {presetBrowserOpen ? 'Hide' : 'Browse'} preset flags
-      </button>
+      </md-outlined-button>
     </div>
     {#if presetBrowserOpen}
       <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;margin-bottom:1rem">
@@ -1463,8 +1466,8 @@
           {newFlagFile ? newFlagFile.name : 'Choose image'}
           <input type="file" accept="image/*" style="display:none" onchange={onFlagFileChange} />
         </label>
-        <button class="btn btn-primary btn-sm" onclick={addFlag}
-          disabled={!newFlagName.trim() || !newFlagFile}>Add flag</button>
+        <md-filled-button class="md-sm" onclick={addFlag}
+          disabled={!newFlagName.trim() || !newFlagFile}>Add flag</md-filled-button>
       </div>
     </div>
   </div>
@@ -1481,7 +1484,7 @@
           <input class="field-name-input" type="text" bind:value={fieldNameEdits[field.id]}
             onblur={() => renameField(field.id)}
             onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()} />
-          <button class="btn btn-danger btn-sm" onclick={() => deleteField(field.id)}>Delete</button>
+          <md-filled-button class="md-danger md-sm" onclick={() => deleteField(field.id)}>Delete</md-filled-button>
         </div>
         <div class="tag-list" style="margin-bottom:0.6rem">
           {#each field.entries as entry}
@@ -1505,15 +1508,15 @@
           <input type="text" style="flex:1;min-width:80px" placeholder="Qualifier (optional)"
             bind:value={newEntryStatuses[field.id]}
             onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addEntry(field.id))} />
-          <button class="btn btn-secondary btn-sm" onclick={() => addEntry(field.id)}
-            disabled={!newEntryValues[field.id]?.trim()}>Add</button>
+          <md-outlined-button class="md-sm" onclick={() => addEntry(field.id)}
+            disabled={!newEntryValues[field.id]?.trim()}>Add</md-outlined-button>
         </div>
       </div>
     {/each}
     <div class="form-row" style="margin-top:0.25rem">
       <input type="text" bind:value={newFieldName} placeholder="New section name…"
         onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addField())} />
-      <button class="btn btn-primary btn-sm" onclick={addField} disabled={!newFieldName.trim()}>+ Add section</button>
+      <md-filled-button class="md-sm" onclick={addField} disabled={!newFieldName.trim()}>+ Add section</md-filled-button>
     </div>
   </div>
 
@@ -1584,7 +1587,7 @@
           <span class="link-size-val">{newLinkIconSize.toFixed(2).replace(/\.?0+$/, '')}×</span>
         </div>
       {/if}
-      <button class="btn btn-secondary btn-sm" onclick={addLink} disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}>Add</button>
+      <md-outlined-button class="md-sm" onclick={addLink} disabled={!newLinkLabel.trim() || !newLinkUrl.trim()}>Add</md-outlined-button>
     </div>
   </div>
 
@@ -1617,7 +1620,7 @@
           {newImageFile ? newImageFile.name : 'Choose image'}
           <input type="file" accept="image/*" style="display:none" onchange={onImageFileChange} />
         </label>
-        <button class="btn btn-primary btn-sm" onclick={addImage} disabled={!newImageFile}>Add image</button>
+        <md-filled-button class="md-sm" onclick={addImage} disabled={!newImageFile}>Add image</md-filled-button>
       </div>
     </div>
   </div>
@@ -1641,11 +1644,12 @@
           <i class="fa-solid fa-grip-vertical" style="color:var(--text-muted);font-size:12px"></i>
           <span class="profile-badge" style="--badge-color:{b.color}"><i class="{b.icon}"></i> {b.name}</span>
           <span style="flex:1;font-size:12px;color:var(--text-muted)">{b.description}</span>
-          <button class="btn btn-ghost btn-sm" style="padding:0.2rem 0.5rem;font-size:12px"
+          <md-icon-button
             title={b.visible ? 'Hide badge' : 'Show badge'}
+            aria-label={b.visible ? 'Hide badge' : 'Show badge'}
             onclick={() => toggleBadgeVisibility(b.id, !b.visible)}>
-            <i class="fa-solid {b.visible ? 'fa-eye' : 'fa-eye-slash'}"></i>
-          </button>
+            <i class="fa-solid {b.visible ? 'fa-eye' : 'fa-eye-slash'}" style="font-size:16px"></i>
+          </md-icon-button>
         </div>
       {/each}
     </div>
@@ -1671,7 +1675,7 @@
     <div class="form-row">
       <input type="text" bind:value={newFriend} placeholder="Name or @username…"
         onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addFriend())} />
-      <button class="btn btn-secondary btn-sm" onclick={addFriend} disabled={!newFriend.trim()}>Add</button>
+      <md-outlined-button class="md-sm" onclick={addFriend} disabled={!newFriend.trim()}>Add</md-outlined-button>
     </div>
   </div>
 
@@ -1703,22 +1707,22 @@
 
           <div class="form-row" style="margin-bottom:0.75rem">
             <input type="text" bind:value={slotNameInput[num]} placeholder="Slot name…" maxlength="64" />
-            <button class="btn btn-primary btn-sm" onclick={() => saveSlot(num)}>
-              <i class="fa-solid fa-floppy-disk"></i> Save current
-            </button>
+            <md-filled-button class="md-sm" onclick={() => saveSlot(num)}>
+              <i slot="icon" class="fa-solid fa-floppy-disk"></i> Save current
+            </md-filled-button>
           </div>
 
           {#if meta}
             <div class="slot-actions">
-              <button class="btn btn-secondary btn-sm" onclick={() => loadSlot(num)}>
-                <i class="fa-solid fa-upload"></i> Load
-              </button>
-              <button class="btn btn-secondary btn-sm" onclick={() => exportSlot(num)}>
-                <i class="fa-solid fa-download"></i> Export
-              </button>
-              <button class="btn btn-danger btn-sm" onclick={() => deleteSlot(num)}>
-                <i class="fa-solid fa-trash"></i> Delete
-              </button>
+              <md-outlined-button class="md-sm" onclick={() => loadSlot(num)}>
+                <i slot="icon" class="fa-solid fa-upload"></i> Load
+              </md-outlined-button>
+              <md-outlined-button class="md-sm" onclick={() => exportSlot(num)}>
+                <i slot="icon" class="fa-solid fa-download"></i> Export
+              </md-outlined-button>
+              <md-filled-button class="md-danger md-sm" onclick={() => deleteSlot(num)}>
+                <i slot="icon" class="fa-solid fa-trash"></i> Delete
+              </md-filled-button>
             </div>
           {/if}
         </div>
@@ -1741,13 +1745,13 @@
         {#if importData}
           <div style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center">
             <span style="font-size:13px;color:var(--text-muted)">Apply to:</span>
-            <button class="btn btn-primary btn-sm" onclick={applyImportNow}>
-              <i class="fa-solid fa-bolt"></i> Current profile
-            </button>
+            <md-filled-button class="md-sm" onclick={applyImportNow}>
+              <i slot="icon" class="fa-solid fa-bolt"></i> Current profile
+            </md-filled-button>
             {#each [1, 2, 3] as num}
-              <button class="btn btn-secondary btn-sm" onclick={() => applyImportToSlot(num)}>
+              <md-outlined-button class="md-sm" onclick={() => applyImportToSlot(num)}>
                 Slot {num}
-              </button>
+              </md-outlined-button>
             {/each}
           </div>
         {/if}
@@ -1785,36 +1789,12 @@
 
 <style>
   .editor-tabs {
-    display: flex;
-    gap: 0.25rem;
     margin-bottom: 1.25rem;
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 0;
+    --md-primary-tab-container-color: transparent;
   }
-  .editor-tab {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.5rem 1rem;
-    border: none;
-    background: none;
-    color: var(--text-muted);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    border-radius: var(--radius) var(--radius) 0 0;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
-  }
-  .editor-tab:hover {
-    color: var(--text);
-    background: var(--bg-input);
-  }
-  .editor-tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-    background: none;
+  .editor-tabs i[slot="icon"] { font-size: 18px; line-height: 1; }
+  @media (max-width: 640px) {
+    .editor-tabs md-primary-tab { padding: 0 8px; }
   }
   .link-item {
     flex-wrap: wrap;

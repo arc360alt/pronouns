@@ -213,7 +213,7 @@
     <p style="font-size:4rem;margin-bottom:0.5rem">404</p>
     <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:0.75rem">Page Not Found</h1>
     <p style="color:var(--text-muted);margin-bottom:1.5rem">This page doesn't exist.</p>
-    <a href="/" class="btn btn-secondary">Go Home</a>
+    <md-outlined-button href="/">Go Home</md-outlined-button>
   </div>
 {:else if !loading}
 <div class="dm-root">
@@ -221,16 +221,15 @@
   <aside class="dm-sidebar" class:dm-sidebar-hidden={!mobileShowSidebar}>
     <div class="dm-sidebar-header">
       <span class="dm-sidebar-title">Messages</span>
-      <button class="btn btn-primary btn-sm" onclick={() => { showNewDm = true; newDmError = ''; newDmSuccess = ''; }}>
-        <i class="fa-solid fa-plus"></i> New
-      </button>
+      <md-filled-button class="md-sm" onclick={() => { showNewDm = true; newDmError = ''; newDmSuccess = ''; }}>
+        <i slot="icon" class="fa-solid fa-plus"></i> New
+      </md-filled-button>
     </div>
 
     <div class="dm-settings-row">
       <span>Accept DM requests</span>
-      <button class="dm-toggle {dmEnabled ? 'dm-toggle-on' : ''}" onclick={toggleDmRequests} title={dmEnabled ? 'Turn off DM requests' : 'Turn on DM requests'}>
-        <span class="dm-toggle-knob"></span>
-      </button>
+      <md-switch icons selected={dmEnabled} onchange={toggleDmRequests}
+        title={dmEnabled ? 'Turn off DM requests' : 'Turn on DM requests'} aria-label="Accept DM requests"></md-switch>
     </div>
 
     {#if loading}
@@ -242,12 +241,12 @@
           <div class="dm-request-row">
             <i class="fa-solid fa-user-plus" style="color:var(--accent);font-size:13px"></i>
             <a href="/@{req.from_username}" class="dm-request-name">@{req.from_username}</a>
-            <button class="btn btn-primary btn-sm dm-req-btn" onclick={() => acceptRequest(req.id)} title="Accept">
+            <md-filled-tonal-icon-button onclick={() => acceptRequest(req.id)} title="Accept" aria-label="Accept">
               <i class="fa-solid fa-check"></i>
-            </button>
-            <button class="btn btn-ghost btn-sm dm-req-btn" onclick={() => denyRequest(req.id)} title="Deny">
+            </md-filled-tonal-icon-button>
+            <md-icon-button onclick={() => denyRequest(req.id)} title="Deny" aria-label="Deny">
               <i class="fa-solid fa-xmark"></i>
-            </button>
+            </md-icon-button>
           </div>
         {/each}
         <div class="dm-divider"></div>
@@ -288,16 +287,16 @@
     {:else}
       {@const activeConv = conversations.find(c => c.id === activeConvId)}
       <div class="dm-chat-header">
-        <button class="dm-back-btn" onclick={() => { mobileShowSidebar = true; stopPolling(); }}>
+        <md-icon-button class="dm-back-btn" aria-label="Back" onclick={() => { mobileShowSidebar = true; stopPolling(); }}>
           <i class="fa-solid fa-arrow-left"></i>
-        </button>
+        </md-icon-button>
         {#if activeConv}
           <a href="/@{otherUser(activeConv)}" class="dm-chat-name">@{otherUser(activeConv)}</a>
         {/if}
         <div style="flex:1"></div>
-        <button class="btn btn-ghost btn-sm" style="color:var(--danger);font-size:12px" onclick={() => { showReport = true; reportDone = false; }}>
-          <i class="fa-solid fa-flag"></i> Report
-        </button>
+        <md-text-button class="md-sm md-danger" onclick={() => { showReport = true; reportDone = false; }}>
+          <i slot="icon" class="fa-solid fa-flag"></i> Report
+        </md-text-button>
       </div>
 
       <div class="dm-messages" bind:this={messagesEl}>
@@ -331,9 +330,9 @@
           disabled={sendingMessage}
           onkeydown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
         />
-        <button class="btn btn-primary" type="submit" disabled={!messageText.trim() || sendingMessage}>
-          <i class="fa-solid fa-paper-plane"></i>
-        </button>
+        <md-filled-icon-button type="submit" aria-label="Send" disabled={!messageText.trim() || sendingMessage}>
+          <i class="fa-solid fa-paper-plane" style="font-size:18px"></i>
+        </md-filled-icon-button>
       </form>
     {/if}
   </main>
@@ -357,10 +356,10 @@
           {#if newDmError}<p style="color:var(--danger);font-size:13px;margin-top:0.5rem">{newDmError}</p>{/if}
           {#if newDmSuccess}<p style="color:var(--success);font-size:13px;margin-top:0.5rem">{newDmSuccess}</p>{/if}
           <div class="modal-actions">
-            <button type="button" class="btn btn-ghost" onclick={() => showNewDm = false}>Cancel</button>
-            <button type="submit" class="btn btn-primary" disabled={!newDmUsername.trim() || newDmLoading}>
+            <md-text-button type="button" onclick={() => showNewDm = false}>Cancel</md-text-button>
+            <md-filled-button type="submit" disabled={!newDmUsername.trim() || newDmLoading}>
               {newDmLoading ? 'Sending…' : 'Send Request'}
-            </button>
+            </md-filled-button>
           </div>
         </form>
       </div>
@@ -378,7 +377,7 @@
           <i class="fa-solid fa-circle-check" style="font-size:2rem;color:var(--success);margin-bottom:0.75rem;display:block"></i>
           <h3 style="margin:0 0 0.5rem">Report submitted</h3>
           <p style="font-size:13px;color:var(--text-muted)">Our team will review this conversation and take action if needed. Thank you for keeping the community safe.</p>
-          <button class="btn btn-primary" style="margin-top:1rem" onclick={() => showReport = false}>Done</button>
+          <md-filled-button style="margin-top:1rem" onclick={() => showReport = false}>Done</md-filled-button>
         </div>
       {:else}
         <div class="modal-header"><h3>Report Conversation</h3></div>
@@ -390,10 +389,10 @@
             Please only report genuine rule violations. Thank you for helping keep the community safe.
           </p>
           <div class="modal-actions">
-            <button class="btn btn-ghost" onclick={() => showReport = false}>Cancel</button>
-            <button class="btn btn-primary" style="background:var(--danger);border-color:var(--danger)" onclick={submitReport} disabled={reportSending}>
+            <md-text-button onclick={() => showReport = false}>Cancel</md-text-button>
+            <md-filled-button class="md-danger" onclick={submitReport} disabled={reportSending}>
               {reportSending ? 'Sending…' : 'Report & Send Conversation'}
-            </button>
+            </md-filled-button>
           </div>
         </div>
       {/if}

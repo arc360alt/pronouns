@@ -230,14 +230,14 @@
     </div>
 
     <div class="crop-actions">
-      <button class="btn btn-secondary" onclick={onCancel}>Cancel</button>
-      <button class="btn btn-primary" onclick={confirm} disabled={!imgEl || applying}>
+      <md-outlined-button onclick={onCancel}>Cancel</md-outlined-button>
+      <md-filled-button onclick={confirm} disabled={!imgEl || applying}>
         {#if applying}
           <PixLoader size={20} /> Processing…
         {:else}
           <i class="fa-solid fa-check"></i> Apply crop
         {/if}
-      </button>
+      </md-filled-button>
     </div>
   </div>
 </div>

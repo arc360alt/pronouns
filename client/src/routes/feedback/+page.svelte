@@ -60,10 +60,10 @@
         Thanks for taking the time — we'll review it soon.
       </p>
       <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-secondary" disabled={cooldown > 0} onclick={() => { submitted = false; message = ''; }}>
+        <md-outlined-button disabled={cooldown > 0} onclick={() => { submitted = false; message = ''; }}>
           {cooldown > 0 ? `Wait ${fmtCooldown(cooldown)}` : 'Send another'}
-        </button>
-        <a href="/" class="btn btn-primary" style="color:#fff">Back to home</a>
+        </md-outlined-button>
+        <md-filled-button href="/">Back to home</md-filled-button>
       </div>
     </div>
   {:else}
@@ -96,8 +96,8 @@
         <p class="msg-error" style="margin-bottom:1rem">{error}</p>
       {/if}
 
-      <button
-        class="btn btn-primary"
+      <md-filled-button
+       
         disabled={submitting || !message.trim() || cooldown > 0}
         onclick={async () => {
           error = '';
@@ -120,7 +120,7 @@
         {:else}
           Send feedback
         {/if}
-      </button>
+      </md-filled-button>
     </div>
   {/if}
 </div>

@@ -62,9 +62,9 @@
       Notifications
     </h1>
     {#if notifications.length > 0}
-      <button class="btn btn-ghost btn-sm" onclick={markAllRead}>
-        <i class="fa-solid fa-check-double"></i> Mark all read
-      </button>
+      <md-text-button class="md-sm" onclick={markAllRead}>
+        <i slot="icon" class="fa-solid fa-check-double"></i> Mark all read
+      </md-text-button>
     {/if}
   </div>
 
